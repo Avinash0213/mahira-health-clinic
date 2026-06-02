@@ -1,4 +1,5 @@
 import React from "react";
+import logo from "../assets/logo.png";
 
 interface MahiraLogoProps {
   className?: string;
@@ -9,7 +10,7 @@ interface MahiraLogoProps {
 export const MahiraLogo: React.FC<MahiraLogoProps> = ({ className, size = 120, style }) => {
   return (
     <img 
-      src="/logo.png" 
+      src={logo} 
       alt="Mahira Health Care Logo"
       className={className}
       style={{ 
