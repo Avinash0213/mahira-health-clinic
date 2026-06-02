@@ -1,12 +1,20 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { calculateDose } from "./utils/doseCalculator";
+import { calculateDose, MEDICINE_DATASET } from "./utils/doseCalculator";
 import type { Medicine } from "./utils/doseCalculator";
 import { MedicineSelector } from "./components/MedicineSelector";
 import { PrescriptionPreview } from "./components/PrescriptionPreview";
+import { MahiraLogo } from "./components/MahiraLogo";
+import { SettingsModal } from "./components/SettingsModal";
 import type { SelectedMedicineInstance } from "./components/PrescriptionPreview";
 import { LatinLegend } from "./components/LatinLegend";
 import { PrescriptionHistory } from "./components/PrescriptionHistory";
 import type { SavedPrescription } from "./components/PrescriptionHistory";
+
+// Layout pagination imports
+import { useMeasuredHeights } from "./hooks/useMeasuredHeights";
+import { paginatePrescriptionContent } from "./utils/paginatePrescriptionContent";
+import { PrescriptionPage } from "./components/PrescriptionPage";
+import { CONTENT_BUDGET_PX, A4_WIDTH_PX, PAGE_PADDING_PX } from "./utils/prescriptionConstants";
 
 // Helper to format date as "DD MMM YYYY"
 const formatDate = (date: Date): string => {
@@ -34,10 +42,55 @@ export const App: React.FC = () => {
   const [followUp, setFollowUp] = useState<string>("");
   const [savedHistory, setSavedHistory] = useState<SavedPrescription[]>([]);
 
+  // Syncing states
+  const DEFAULT_SHEETS_URL = "https://script.google.com/macros/s/AKfycbx2xKc6c0YNWKOIlBRlMveGtsVRk6sSRSB8hpX1XTfQud80TwbxCzyue9_gMq0e-Xozxw/exec";
+  const [googleSheetsUrl, setGoogleSheetsUrl] = useState<string>(() => {
+    const saved = localStorage.getItem("mhc_sheets_url");
+    return saved !== null ? saved : DEFAULT_SHEETS_URL;
+  });
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [syncMedicines, setSyncMedicines] = useState<Medicine[]>([]);
+  const [customMedicines, setCustomMedicines] = useState<Medicine[]>([]);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
   // Format once per session/render
   const currentDateStr = useMemo(() => formatDate(new Date()), []);
 
-  // Initialize Rx number and History on load
+  // Measure dynamic medicine row and advice/followup heights off-screen
+  const { medicineHeights, adviceHeight, followUpHeight, isMeasuring } = useMeasuredHeights(
+    selectedMedicines,
+    advice,
+    followUp,
+    A4_WIDTH_PX - PAGE_PADDING_PX * 2,
+    patientWeight
+  );
+
+  // Recalculate A4 page allocations whenever content or measured heights change
+  const prescriptionPages = useMemo(() => {
+    return paginatePrescriptionContent({
+      medicines: selectedMedicines,
+      medicineHeights,
+      contentBudgetPx: CONTENT_BUDGET_PX,
+      adviceHeight,
+      followUpHeight
+    });
+  }, [selectedMedicines, medicineHeights, adviceHeight, followUpHeight]);
+
+  // Fetch medicines catalog from Sheets
+  const fetchMedicinesFromSheets = async (url: string) => {
+    try {
+      const response = await fetch(url, { method: "GET" });
+      if (!response.ok) throw new Error("Network response was not ok");
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setSyncMedicines(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch medicines from Google Sheets", err);
+    }
+  };
+
+  // Initialize Rx number, History, Sheets URL, and Custom medicines on load
   useEffect(() => {
     setRxNumber(generateRxNumber());
 
@@ -49,7 +102,141 @@ export const App: React.FC = () => {
         console.error("Failed to parse saved prescriptions history", err);
       }
     }
+
+    const savedUrl = localStorage.getItem("mhc_sheets_url");
+    const url = savedUrl !== null ? savedUrl : DEFAULT_SHEETS_URL;
+    setGoogleSheetsUrl(url);
+    if (url) {
+      fetchMedicinesFromSheets(url);
+    }
+
+    const storedCustom = localStorage.getItem("mhc_custom_medicines");
+    if (storedCustom) {
+      try {
+        setCustomMedicines(JSON.parse(storedCustom));
+      } catch (err) {
+        console.error("Failed to parse custom medicines", err);
+      }
+    }
   }, []);
+
+  const mergedMedicines = useMemo(() => {
+    if (syncMedicines.length > 0) {
+      return syncMedicines;
+    }
+    return [...MEDICINE_DATASET, ...customMedicines];
+  }, [syncMedicines, customMedicines]);
+
+  const handleSaveSheetsUrl = (url: string) => {
+    setGoogleSheetsUrl(url);
+    localStorage.setItem("mhc_sheets_url", url);
+    if (url) {
+      fetchMedicinesFromSheets(url);
+    } else {
+      setSyncMedicines([]);
+    }
+  };
+
+  const handleAddMedicine = async (med: Medicine): Promise<boolean> => {
+    if (googleSheetsUrl) {
+      setIsSyncing(true);
+      try {
+        await fetch(googleSheetsUrl, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            action: "add_medicine",
+            medicine: med
+          })
+        });
+        await fetchMedicinesFromSheets(googleSheetsUrl);
+        setIsSyncing(false);
+        return true;
+      } catch (err) {
+        console.error("Failed to sync new medicine with Sheets", err);
+        setIsSyncing(false);
+        alert("Failed to sync new medicine with Google Sheets. Connecting locally instead.");
+        return false;
+      }
+    } else {
+      const updated = [...customMedicines, med];
+      setCustomMedicines(updated);
+      localStorage.setItem("mhc_custom_medicines", JSON.stringify(updated));
+      return true;
+    }
+  };
+
+  const handleDeleteMedicine = async (name: string, form: string, strength: string): Promise<boolean> => {
+    const confirmDelete = window.confirm(`Are you sure you want to delete ${name} from the catalog?`);
+    if (!confirmDelete) return false;
+
+    if (googleSheetsUrl) {
+      setIsSyncing(true);
+      try {
+        await fetch(googleSheetsUrl, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            action: "delete_medicine",
+            medicineName: name,
+            medicineForm: form,
+            medicineStrength: strength
+          })
+        });
+        await fetchMedicinesFromSheets(googleSheetsUrl);
+        setIsSyncing(false);
+        return true;
+      } catch (err) {
+        console.error("Failed to sync delete with Sheets", err);
+        setIsSyncing(false);
+        alert("Failed to sync deletion with Google Sheets.");
+        return false;
+      }
+    } else {
+      const updated = customMedicines.filter(
+        (m) => !(m.name.toLowerCase() === name.toLowerCase() && 
+                 m.form.toLowerCase() === form.toLowerCase() && 
+                 m.strength.toLowerCase() === strength.toLowerCase())
+      );
+      setCustomMedicines(updated);
+      localStorage.setItem("mhc_custom_medicines", JSON.stringify(updated));
+      return true;
+    }
+  };
+
+  const handleRestoreDefaults = async (): Promise<boolean> => {
+    if (googleSheetsUrl) {
+      setIsSyncing(true);
+      try {
+        await fetch(googleSheetsUrl, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            action: "restore_defaults"
+          })
+        });
+        await fetchMedicinesFromSheets(googleSheetsUrl);
+        setIsSyncing(false);
+        return true;
+      } catch (err) {
+        console.error("Failed to restore defaults with Sheets", err);
+        setIsSyncing(false);
+        alert("Failed to restore missing defaults on Google Sheets.");
+        return false;
+      }
+    }
+    return true;
+  };
+
 
   // Add medicine to selection
   const handleSelectMedicine = (med: Medicine) => {
@@ -116,10 +303,59 @@ export const App: React.FC = () => {
     setSavedHistory(updatedHistory);
     localStorage.setItem("mhc_prescriptions", JSON.stringify(updatedHistory));
 
+    // Log to Google Sheets asynchronously if URL is configured
+    if (googleSheetsUrl) {
+      fetch(googleSheetsUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          action: "log_prescription",
+          ...newRx
+        })
+      }).catch(err => {
+        console.error("Failed to log prescription to Google Sheets", err);
+      });
+    }
+
     // Wait short delay to ensure React commits state, then trigger print dialog
     setTimeout(() => {
       window.print();
     }, 150);
+  };
+
+  // Start a new patient session
+  const handleNewPatient = () => {
+    // Check if there is any data entered
+    const hasData =
+      patientName.trim() !== "" ||
+      patientAge.trim() !== "" ||
+      patientWeight !== null ||
+      selectedMedicines.length > 0 ||
+      advice.trim() !== "" ||
+      followUp.trim() !== "";
+
+    if (!hasData) return;
+
+    // Check if the current prescription is already printed/saved in history
+    const isSaved = savedHistory.some((item) => item.rxNumber === rxNumber);
+
+    if (!isSaved) {
+      const confirmNew = window.confirm(
+        "You have not printed/saved the current prescription. Are you sure you want to discard it and create a new patient?"
+      );
+      if (!confirmNew) return;
+    }
+
+    setPatientName("");
+    setPatientAge("");
+    setPatientWeight(null);
+    setSelectedMedicines([]);
+    setAdvice("");
+    setFollowUp("");
+    setRxNumber(generateRxNumber());
   };
 
   // Load prescription from history
@@ -155,15 +391,47 @@ export const App: React.FC = () => {
         <header className="top-navbar">
           <div className="nav-container">
             <div className="nav-left">
-              <div className="clinic-logo">
-                <span>M</span>
-              </div>
+              <MahiraLogo size={42} style={{ marginRight: "4px" }} />
               <div className="clinic-branding">
-                <h1 className="clinic-title font-display">Mahira Health Clinic</h1>
-                <p className="clinic-subtitle">Pediatric Care System</p>
+                <div className="clinic-title-container">
+                  <span className="clinic-brand-mahira">Mahira</span>
+                  <div className="clinic-right-group">
+                    <span className="clinic-brand-healthcare">Health Care</span>
+                    <div className="clinic-underline-row">
+                      <div className="clinic-line"></div>
+                      <span className="clinic-tagline">We Care For You</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="nav-right">
+            <div className="nav-right" style={{ gap: "12px" }}>
+              {googleSheetsUrl && (
+                <span 
+                  className={`sync-status-indicator ${syncMedicines.length > 0 ? "" : "offline"}`} 
+                  title={syncMedicines.length > 0 ? "Synced with Google Sheets" : "Offline / Check Sheets URL"}
+                >
+                  <span 
+                    className="live-dot" 
+                    style={{ 
+                      backgroundColor: syncMedicines.length > 0 ? "#10b981" : "#9ca3af",
+                      animation: syncMedicines.length > 0 ? "pulse-live 1.8s infinite" : "none" 
+                    }}
+                  ></span>
+                  {syncMedicines.length > 0 ? "Synced" : "Offline"}
+                </span>
+              )}
+              <button 
+                type="button" 
+                className="btn-nav-settings" 
+                onClick={() => setIsSettingsOpen(true)}
+                title="Open Clinic Settings"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+              </button>
               <div className="date-badge">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -195,6 +463,19 @@ export const App: React.FC = () => {
                     <h3 className="card-title">Patient Information</h3>
                     <p className="card-subtitle">Enter child details and medical practitioner name</p>
                   </div>
+                  <button
+                    type="button"
+                    className="btn btn-new-patient btn-sm"
+                    onClick={handleNewPatient}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ marginRight: "6px" }}>
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="8.5" cy="7" r="4"></circle>
+                      <line x1="20" y1="8" x2="20" y2="14"></line>
+                      <line x1="23" y1="11" x2="17" y2="11"></line>
+                    </svg>
+                    New Patient
+                  </button>
                 </div>
                 <div className="card-body">
                   <div className="form-grid">
@@ -272,6 +553,7 @@ export const App: React.FC = () => {
 
               {/* SECTION 2: Medicine Selection */}
               <MedicineSelector
+                availableMedicines={mergedMedicines}
                 selectedMedicines={selectedMedicines}
                 onSelectMedicine={handleSelectMedicine}
               />
@@ -531,144 +813,46 @@ export const App: React.FC = () => {
                 followUp={followUp}
                 onClearAll={handleClearAll}
                 onPrint={handlePrint}
+                pages={prescriptionPages}
+                isMeasuring={isMeasuring}
               />
             </div>
           </div>
         </main>
       </div>
 
-      {/* PRINT-ONLY PRESCRIPTION DOCUMENT */}
-      <div className="print-only prescription-print-document">
-        {/* Print Header */}
-        <div className="print-header">
-          <div className="print-header-left">
-            <h1 className="print-clinic-name font-display">Mahira Health Clinic</h1>
-            <p className="print-clinic-sub font-mono">PEDIATRIC CARE &bull; SPECIALIST PRESCRIPTION</p>
-          </div>
-          <div className="print-header-right font-mono">
-            <div><strong>Rx No:</strong> {rxNumber}</div>
-            <div><strong>Date:</strong> {currentDateStr}</div>
-            {doctorName && <div><strong>Doctor:</strong> Dr. {doctorName}</div>}
-          </div>
-        </div>
-
-        {/* Patient Information Block */}
-        <div className="print-patient-block">
-          <div className="print-patient-grid">
-            <div className="print-patient-cell">
-              <span className="print-lbl">PATIENT NAME</span>
-              <span className="print-val font-semibold">{patientName || "—"}</span>
-            </div>
-            <div className="print-patient-cell">
-              <span className="print-lbl">AGE</span>
-              <span className="print-val">{patientAge || "—"}</span>
-            </div>
-            <div className="print-patient-cell">
-              <span className="print-lbl">WEIGHT</span>
-              <span className="print-val">
-                {patientWeight !== null && patientWeight > 0 ? `${patientWeight} kg` : "—"}
-              </span>
-            </div>
-            <div className="print-patient-cell">
-              <span className="print-lbl">DATE</span>
-              <span className="print-val">{currentDateStr}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Prescription Symbol and Table */}
-        <div className="print-body">
-          <div className="print-rx-symbol font-display text-primary">Rx</div>
-
-          <table className="print-medicine-table">
-            <thead>
-              <tr>
-                <th style={{ width: "5%" }}>#</th>
-                <th style={{ width: "25%" }}>Medicine</th>
-                <th style={{ width: "20%" }}>Form &middot; Strength</th>
-                <th style={{ width: "15%" }}>Dose</th>
-                <th style={{ width: "15%" }}>Frequency</th>
-                <th style={{ width: "10%" }}>Duration</th>
-                <th style={{ width: "10%" }}>Instructions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {selectedMedicines.map((med, index) => {
-                const calculated = calculateDose(med, patientWeight, med.overrideDose);
-                
-                // Print Dose Rules logic:
-                // - Liquid: volume and weight display e.g. "240mg (10ml)"
-                // - Override dose: use override value
-                // - Tablet/drops: "As Directed" (if dosePerKg is null)
-                let printedDose = calculated.doseText;
-                if (med.overrideDose === null && med.dosePerKg === null) {
-                  printedDose = "As Directed";
-                }
-
-                const freqLabels: Record<string, string> = {
-                  OD: "Once Daily",
-                  BD: "Twice Daily",
-                  TDS: "Three Times Daily",
-                  HS: "At Bedtime",
-                  SOS: "If Needed"
-                };
-
-                return (
-                  <tr key={med.id}>
-                    <td>{index + 1}</td>
-                    <td className="font-semibold">{med.name}</td>
-                    <td>
-                      <span className="print-form-badge">{med.form}</span>
-                      <span className="print-strength-label">{med.strength}</span>
-                    </td>
-                    <td className="font-semibold text-primary font-mono">{printedDose}</td>
-                    <td>
-                      <div><strong>{med.frequency}</strong></div>
-                      <div className="print-freq-sub">{freqLabels[med.frequency]}</div>
-                    </td>
-                    <td>{med.duration || "—"}</td>
-                    <td className="print-instructions-cell">{med.instructions || "—"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-
-          {/* Advice block */}
-          {advice && (
-            <div className="print-section-container">
-              <h3 className="print-section-heading">ADVICE & INSTRUCTIONS</h3>
-              <p className="print-section-text">{advice}</p>
-            </div>
-          )}
-
-          {/* Follow-up block */}
-          {followUp && (
-            <div className="print-section-container">
-              <h3 className="print-section-heading">FOLLOW-UP VISIT</h3>
-              <p className="print-section-text font-semibold">{followUp}</p>
-            </div>
-          )}
-
-          {/* Disclaimer Box */}
-          <div className="print-disclaimer-box">
-            This prescription is valid for one-time dispensing only. Kindly consult the doctor before making any change in medication.
-          </div>
-        </div>
-
-        {/* Print Footer */}
-        <div className="print-footer">
-          <div className="print-footer-left font-mono">
-            <div>Mahira Health Clinic</div>
-            <div>Rx Number: {rxNumber}</div>
-          </div>
-          <div className="print-footer-right">
-            <div className="print-sig-line"></div>
-            <div className="print-sig-label">Doctor Signature</div>
-            <div className="print-stamp-label">Stamp & Seal</div>
-          </div>
-        </div>
+      {/* PRINT-ONLY — rendered by PrescriptionPage, not a separate layout */}
+      <div className="print-only">
+        {prescriptionPages.map(pageData => (
+          <PrescriptionPage
+            key={pageData.pageNumber}
+            rxNumber={rxNumber}
+            currentDate={currentDateStr}
+            patientName={patientName}
+            patientAge={patientAge}
+            patientWeight={patientWeight}
+            doctorName={doctorName}
+            pageData={pageData}
+            totalPages={prescriptionPages.length}
+            advice={advice}
+            followUp={followUp}
+            isPreview={false}
+          />
+        ))}
       </div>
+
+      {/* Settings Panel Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        googleSheetsUrl={googleSheetsUrl}
+        onSaveSheetsUrl={handleSaveSheetsUrl}
+        medicines={mergedMedicines}
+        onAddMedicine={handleAddMedicine}
+        onDeleteMedicine={handleDeleteMedicine}
+        onRestoreDefaults={handleRestoreDefaults}
+        isSyncing={isSyncing}
+      />
     </div>
   );
 };

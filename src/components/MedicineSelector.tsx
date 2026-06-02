@@ -1,13 +1,14 @@
 import React, { useState } from "react";
-import { MEDICINE_DATASET } from "../utils/doseCalculator";
 import type { Medicine } from "../utils/doseCalculator";
 
 interface MedicineSelectorProps {
+  availableMedicines: Medicine[];
   selectedMedicines: { name: string; form: string; strength: string }[];
   onSelectMedicine: (medicine: Medicine) => void;
 }
 
 export const MedicineSelector: React.FC<MedicineSelectorProps> = ({
+  availableMedicines,
   selectedMedicines,
   onSelectMedicine
 }) => {
@@ -24,7 +25,7 @@ export const MedicineSelector: React.FC<MedicineSelectorProps> = ({
   };
 
   // Filter medicines based on search box and selection status
-  const filteredMedicines = MEDICINE_DATASET.filter((med) => {
+  const filteredMedicines = availableMedicines.filter((med) => {
     const isAlreadySelected = isSelected(med);
     if (isAlreadySelected) return false;
 

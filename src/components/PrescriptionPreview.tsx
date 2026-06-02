@@ -1,5 +1,6 @@
 import React from "react";
-import { calculateDose } from "../utils/doseCalculator";
+import { PrescriptionPage } from "./PrescriptionPage";
+import type { PrescriptionPageData } from "../utils/paginatePrescriptionContent";
 
 export interface SelectedMedicineInstance {
   id: string;
@@ -27,15 +28,9 @@ interface PrescriptionPreviewProps {
   followUp: string;
   onClearAll: () => void;
   onPrint: () => void;
+  pages: PrescriptionPageData[];
+  isMeasuring: boolean;
 }
-
-const FREQUENCY_LABELS: Record<string, string> = {
-  OD: "Once Daily",
-  BD: "Twice Daily",
-  TDS: "Three Times Daily",
-  HS: "At Bedtime",
-  SOS: "If Needed"
-};
 
 export const PrescriptionPreview: React.FC<PrescriptionPreviewProps> = ({
   rxNumber,
@@ -48,7 +43,9 @@ export const PrescriptionPreview: React.FC<PrescriptionPreviewProps> = ({
   advice,
   followUp,
   onClearAll,
-  onPrint
+  onPrint,
+  pages,
+  isMeasuring
 }) => {
   return (
     <div className="preview-sticky-wrapper screen-only">
@@ -71,144 +68,39 @@ export const PrescriptionPreview: React.FC<PrescriptionPreviewProps> = ({
         </div>
 
         {/* Prescription Canvas */}
-        <div className="prescription-canvas">
-          {/* Rx Document Header */}
-          <div className="canvas-header">
-            <div className="canvas-clinic-info">
-              <h2 className="canvas-clinic-name font-display">Mahira Health Clinic</h2>
-              <p className="canvas-clinic-sub">PEDIATRIC CARE SYSTEM</p>
+        <div className="preview-pages-container">
+          {isMeasuring && (
+            <div className="preview-measuring-overlay">
+              <div 
+                style={{ 
+                  border: "2.5px solid #d6e4e0",
+                  borderTop: "2.5px solid var(--primary)",
+                  borderRadius: "50%",
+                  width: "18px",
+                  height: "18px",
+                  animation: "spin 0.8s linear infinite",
+                  marginRight: "8px"
+                }}
+              />
+              <span>Measuring layout...</span>
             </div>
-            <div className="canvas-rx-meta">
-              <div className="canvas-rx-num">
-                <span className="meta-label">Rx No:</span>
-                <span className="font-mono text-dark">{rxNumber}</span>
-              </div>
-              <div className="canvas-rx-date">
-                <span className="meta-label">Date:</span>
-                <span className="text-dark">{currentDate}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Rx Patient Details */}
-          <div className="canvas-patient-info">
-            <div className="canvas-info-row">
-              <div className="canvas-info-cell">
-                <span className="meta-label">PATIENT NAME</span>
-                <span className="meta-value font-medium text-dark">
-                  {patientName || <span className="text-placeholder">Enter Name</span>}
-                </span>
-              </div>
-              <div className="canvas-info-cell">
-                <span className="meta-label">AGE</span>
-                <span className="meta-value text-dark">
-                  {patientAge || <span className="text-placeholder">Enter Age</span>}
-                </span>
-              </div>
-              <div className="canvas-info-cell">
-                <span className="meta-label">WEIGHT</span>
-                <span className="meta-value text-dark">
-                  {patientWeight !== null && patientWeight > 0 ? (
-                    `${patientWeight} kg`
-                  ) : (
-                    <span className="text-placeholder">Enter Weight</span>
-                  )}
-                </span>
-              </div>
-            </div>
-            {doctorName && (
-              <div className="canvas-doctor-row">
-                <span className="meta-label">PEDIATRICIAN</span>
-                <span className="meta-value font-medium text-dark">Dr. {doctorName}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Rx Symbol & Body */}
-          <div className="canvas-body">
-            <div className="rx-symbol font-display text-primary">Rx</div>
-
-            {selectedMedicines.length > 0 ? (
-              <div className="canvas-med-list">
-                {selectedMedicines.map((med, idx) => {
-                  // Re-calculate dosage based on current weight/override
-                  const calc = calculateDose(med, patientWeight, med.overrideDose);
-                  return (
-                    <div key={med.id} className="canvas-med-item">
-                      <div className="canvas-med-header">
-                        <span className="canvas-med-number">{idx + 1}.</span>
-                        <div className="canvas-med-details">
-                          <span className="canvas-med-name font-medium text-dark">{med.name}</span>
-                          <span className="canvas-med-spec">
-                            {med.form} &middot; {med.strength} &middot; {med.dosePerKg !== null ? `${med.dosePerKg} mg/kg` : "Fixed Dose"}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="canvas-med-schedule">
-                        <div className="canvas-schedule-item">
-                          <span className="schedule-lbl">Dose:</span>
-                          <span className="schedule-val font-semibold text-primary">{calc.doseText}</span>
-                        </div>
-                        <div className="canvas-schedule-item">
-                          <span className="schedule-lbl">Sig:</span>
-                          <span className="schedule-val text-dark">
-                            {med.frequency} &mdash; {FREQUENCY_LABELS[med.frequency]}
-                          </span>
-                        </div>
-                        {med.duration && (
-                          <div className="canvas-schedule-item">
-                            <span className="schedule-lbl">For:</span>
-                            <span className="schedule-val text-dark">{med.duration}</span>
-                          </div>
-                        )}
-                        {med.instructions && (
-                          <div className="canvas-med-instructions text-muted">
-                            <span className="instructions-icon">&deg;</span>
-                            {med.instructions}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="canvas-empty-state">
-                <div className="rx-outline-symbol">Rx</div>
-                <p className="canvas-empty-text">No medications selected yet</p>
-                <p className="canvas-empty-sub">Use the catalog on the left to add medicines</p>
-              </div>
-            )}
-
-            {/* Advice Section */}
-            {advice && (
-              <div className="canvas-section-box">
-                <span className="canvas-section-title">ADVICE & INSTRUCTIONS</span>
-                <p className="canvas-section-content">{advice}</p>
-              </div>
-            )}
-
-            {/* Follow-up Section */}
-            {followUp && (
-              <div className="canvas-section-box">
-                <span className="canvas-section-title">FOLLOW-UP</span>
-                <p className="canvas-section-content font-medium text-dark">{followUp}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Rx Document Footer */}
-          <div className="canvas-footer">
-            <p className="canvas-disclaimer">
-              This prescription is valid for one-time dispensing only. Kindly consult the doctor before making any change in medication.
-            </p>
-            <div className="canvas-signatures">
-              <span className="canvas-clinic-footer">Mahira Health Clinic</span>
-              <div className="canvas-sig-line">
-                <div className="sig-placeholder">Doctor Signature</div>
-              </div>
-            </div>
-          </div>
+          )}
+          {pages.map((pageData) => (
+            <PrescriptionPage
+              key={pageData.pageNumber}
+              rxNumber={rxNumber}
+              currentDate={currentDate}
+              patientName={patientName}
+              patientAge={patientAge}
+              patientWeight={patientWeight}
+              doctorName={doctorName}
+              pageData={pageData}
+              totalPages={pages.length}
+              advice={advice}
+              followUp={followUp}
+              isPreview={true}
+            />
+          ))}
         </div>
 
         {/* Footer Actions */}
@@ -224,7 +116,7 @@ export const PrescriptionPreview: React.FC<PrescriptionPreviewProps> = ({
             type="button"
             className="btn btn-primary flex-2 btn-print-trigger"
             onClick={onPrint}
-            disabled={selectedMedicines.length === 0}
+            disabled={selectedMedicines.length === 0 || isMeasuring}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: "6px" }}>
               <polyline points="6 9 6 2 18 2 18 9"></polyline>
