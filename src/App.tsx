@@ -14,7 +14,15 @@ import type { SavedPrescription } from "./components/PrescriptionHistory";
 import { useMeasuredHeights } from "./hooks/useMeasuredHeights";
 import { paginatePrescriptionContent } from "./utils/paginatePrescriptionContent";
 import { PrescriptionPage } from "./components/PrescriptionPage";
-import { CONTENT_BUDGET_PX, A4_WIDTH_PX, PAGE_PADDING_PX } from "./utils/prescriptionConstants";
+import { 
+  A4_WIDTH_PX, 
+  PAGE_PADDING_PX,
+  A4_HEIGHT_PX,
+  HEADER_HEIGHT_PX,
+  PATIENT_HEIGHT_PX,
+  BOTTOM_HEIGHT_PX,
+  CONTENT_VPAD_PX
+} from "./utils/prescriptionConstants";
 
 // Helper to format date as "DD MMM YYYY"
 const formatDate = (date: Date): string => {
@@ -53,6 +61,33 @@ export const App: React.FC = () => {
   const [customMedicines, setCustomMedicines] = useState<Medicine[]>([]);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
+  // Print Customization States
+  const [showHeader, setShowHeader] = useState<boolean>(() => {
+    const saved = localStorage.getItem("mhc_show_header");
+    return saved !== null ? saved === "true" : false; // Default to false (removed)
+  });
+  const [showFooter, setShowFooter] = useState<boolean>(() => {
+    const saved = localStorage.getItem("mhc_show_footer");
+    return saved !== null ? saved === "true" : false; // Default to false (removed)
+  });
+  const [keepLetterheadSpace, setKeepLetterheadSpace] = useState<boolean>(() => {
+    const saved = localStorage.getItem("mhc_keep_letterhead_space");
+    return saved !== null ? saved === "true" : true;
+  });
+
+  const handleShowHeaderChange = (val: boolean) => {
+    setShowHeader(val);
+    localStorage.setItem("mhc_show_header", String(val));
+  };
+  const handleShowFooterChange = (val: boolean) => {
+    setShowFooter(val);
+    localStorage.setItem("mhc_show_footer", String(val));
+  };
+  const handleKeepLetterheadSpaceChange = (val: boolean) => {
+    setKeepLetterheadSpace(val);
+    localStorage.setItem("mhc_keep_letterhead_space", String(val));
+  };
+
   // Format once per session/render
   const currentDateStr = useMemo(() => formatDate(new Date()), []);
 
@@ -65,16 +100,34 @@ export const App: React.FC = () => {
     patientWeight
   );
 
+  // Calculate A4 content budget dynamically based on header/footer print configuration
+  const contentBudgetPx = useMemo(() => {
+    let headerHeight = HEADER_HEIGHT_PX;
+    let bottomHeight = BOTTOM_HEIGHT_PX;
+
+    if (!keepLetterheadSpace) {
+      if (!showHeader) {
+        headerHeight = 16; // Small margin top instead of the full header
+      }
+      if (!showFooter) {
+        // Footer is 60px of the 160px bottom block
+        bottomHeight = 100;
+      }
+    }
+
+    return A4_HEIGHT_PX - headerHeight - PATIENT_HEIGHT_PX - bottomHeight - CONTENT_VPAD_PX * 2;
+  }, [showHeader, showFooter, keepLetterheadSpace]);
+
   // Recalculate A4 page allocations whenever content or measured heights change
   const prescriptionPages = useMemo(() => {
     return paginatePrescriptionContent({
       medicines: selectedMedicines,
       medicineHeights,
-      contentBudgetPx: CONTENT_BUDGET_PX,
+      contentBudgetPx: contentBudgetPx,
       adviceHeight,
       followUpHeight
     });
-  }, [selectedMedicines, medicineHeights, adviceHeight, followUpHeight]);
+  }, [selectedMedicines, medicineHeights, contentBudgetPx, adviceHeight, followUpHeight]);
 
   // Fetch medicines catalog from Sheets
   const fetchMedicinesFromSheets = async (url: string) => {
@@ -815,6 +868,9 @@ export const App: React.FC = () => {
                 onPrint={handlePrint}
                 pages={prescriptionPages}
                 isMeasuring={isMeasuring}
+                showHeader={showHeader}
+                showFooter={showFooter}
+                keepLetterheadSpace={keepLetterheadSpace}
               />
             </div>
           </div>
@@ -837,6 +893,9 @@ export const App: React.FC = () => {
             advice={advice}
             followUp={followUp}
             isPreview={false}
+            showHeader={showHeader}
+            showFooter={showFooter}
+            keepLetterheadSpace={keepLetterheadSpace}
           />
         ))}
       </div>
@@ -852,6 +911,12 @@ export const App: React.FC = () => {
         onDeleteMedicine={handleDeleteMedicine}
         onRestoreDefaults={handleRestoreDefaults}
         isSyncing={isSyncing}
+        showHeader={showHeader}
+        onShowHeaderChange={handleShowHeaderChange}
+        showFooter={showFooter}
+        onShowFooterChange={handleShowFooterChange}
+        keepLetterheadSpace={keepLetterheadSpace}
+        onKeepLetterheadSpaceChange={handleKeepLetterheadSpaceChange}
       />
     </div>
   );

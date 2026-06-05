@@ -30,6 +30,9 @@ interface PrescriptionPreviewProps {
   onPrint: () => void;
   pages: PrescriptionPageData[];
   isMeasuring: boolean;
+  showHeader: boolean;
+  showFooter: boolean;
+  keepLetterheadSpace: boolean;
 }
 
 export const PrescriptionPreview: React.FC<PrescriptionPreviewProps> = ({
@@ -45,7 +48,10 @@ export const PrescriptionPreview: React.FC<PrescriptionPreviewProps> = ({
   onClearAll,
   onPrint,
   pages,
-  isMeasuring
+  isMeasuring,
+  showHeader,
+  showFooter,
+  keepLetterheadSpace
 }) => {
   return (
     <div className="preview-sticky-wrapper screen-only">
@@ -99,6 +105,9 @@ export const PrescriptionPreview: React.FC<PrescriptionPreviewProps> = ({
               advice={advice}
               followUp={followUp}
               isPreview={true}
+              showHeader={showHeader}
+              showFooter={showFooter}
+              keepLetterheadSpace={keepLetterheadSpace}
             />
           ))}
         </div>

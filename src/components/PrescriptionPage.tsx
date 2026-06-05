@@ -19,6 +19,10 @@ interface PrescriptionPageProps {
   followUp: string;
   // Render context
   isPreview?: boolean;   // true = screen preview (scaled down), false = print size
+  // Print Customization
+  showHeader?: boolean;
+  showFooter?: boolean;
+  keepLetterheadSpace?: boolean;
 }
 
 const FREQUENCY_LABELS: Record<string, string> = {
@@ -40,12 +44,15 @@ export const PrescriptionPage: React.FC<PrescriptionPageProps> = ({
   totalPages,
   advice,
   followUp,
-  isPreview = false
+  isPreview = false,
+  showHeader = true,
+  showFooter = true,
+  keepLetterheadSpace = true
 }) => {
   return (
     <div className="print-page">
       {/* ── HEADER ── never position:fixed, always static */}
-      <div className="page-header">
+      <div className="page-header" style={!showHeader ? (keepLetterheadSpace ? { visibility: "hidden" } : { display: "none" }) : {}}>
         <div className="letterhead-header">
           <MahiraLogo size={isPreview ? 56 : 80} />
           <div className="letterhead-title-container">
@@ -205,7 +212,7 @@ export const PrescriptionPage: React.FC<PrescriptionPageProps> = ({
         </div>
 
         {/* FOOTER STRIP */}
-        <div className="letterhead-footer">
+        <div className="letterhead-footer" style={!showFooter ? (keepLetterheadSpace ? { visibility: "hidden" } : { display: "none" }) : {}}>
           <div className="letterhead-footer-content">
 
             {/* LEFT: address + email + legal note stacked */}

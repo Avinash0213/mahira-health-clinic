@@ -11,6 +11,13 @@ interface SettingsModalProps {
   onDeleteMedicine: (name: string, form: string, strength: string) => Promise<boolean>;
   onRestoreDefaults: () => Promise<boolean>;
   isSyncing: boolean;
+  // Print Settings
+  showHeader: boolean;
+  onShowHeaderChange: (val: boolean) => void;
+  showFooter: boolean;
+  onShowFooterChange: (val: boolean) => void;
+  keepLetterheadSpace: boolean;
+  onKeepLetterheadSpaceChange: (val: boolean) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -22,9 +29,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onAddMedicine,
   onDeleteMedicine,
   onRestoreDefaults,
-  isSyncing
+  isSyncing,
+  showHeader,
+  onShowHeaderChange,
+  showFooter,
+  onShowFooterChange,
+  keepLetterheadSpace,
+  onKeepLetterheadSpaceChange
 }) => {
-  const [activeTab, setActiveTab] = useState<"sheets" | "medicines">("sheets");
+  const [activeTab, setActiveTab] = useState<"sheets" | "medicines" | "print">("sheets");
   const [inputUrl, setInputUrl] = useState(googleSheetsUrl);
   const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
   const [testMessage, setTestMessage] = useState("");
@@ -131,6 +144,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             onClick={() => setActiveTab("medicines")}
           >
             Manage Medicine Catalog
+          </button>
+          <button 
+            className={`modal-tab-btn ${activeTab === "print" ? "active" : ""}`}
+            onClick={() => setActiveTab("print")}
+          >
+            Print Layout Settings
           </button>
         </div>
 
@@ -419,6 +438,69 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: Print Layout Settings */}
+          {activeTab === "print" && (
+            <div className="settings-tab-content">
+              <div className="settings-info-box">
+                <h4>Print & Letterhead Customization</h4>
+                <p>
+                  Customize whether the clinic branding and footer Timings/Address are printed. 
+                  Turn these off if you are printing on pre-printed prescription pad paper.
+                </p>
+              </div>
+
+              <div className="settings-checkbox-group" style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "20px" }}>
+                <label className="checkbox-label" style={{ display: "flex", alignItems: "flex-start", gap: "10px", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={showHeader}
+                    onChange={(e) => onShowHeaderChange(e.target.checked)}
+                    style={{ marginTop: "4px", width: "16px", height: "16px", cursor: "pointer" }}
+                  />
+                  <div>
+                    <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--navy)" }}>Print Clinic Header</span>
+                    <p style={{ fontSize: "12px", color: "var(--muted)", marginTop: "2px" }}>
+                      Includes the clinic logo, brand title "Mahira Health Care", and tagline "We Care For You".
+                    </p>
+                  </div>
+                </label>
+
+                <label className="checkbox-label" style={{ display: "flex", alignItems: "flex-start", gap: "10px", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={showFooter}
+                    onChange={(e) => onShowFooterChange(e.target.checked)}
+                    style={{ marginTop: "4px", width: "16px", height: "16px", cursor: "pointer" }}
+                  />
+                  <div>
+                    <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--navy)" }}>Print Clinic Footer</span>
+                    <p style={{ fontSize: "12px", color: "var(--muted)", marginTop: "2px" }}>
+                      Includes the address, email, OPD timings, and legal disclaimer strip.
+                    </p>
+                  </div>
+                </label>
+
+                {(!showHeader || !showFooter) && (
+                  <label className="checkbox-label" style={{ display: "flex", alignItems: "flex-start", gap: "10px", cursor: "pointer", borderTop: "1px solid var(--border)", paddingTop: "16px" }}>
+                    <input
+                      type="checkbox"
+                      checked={keepLetterheadSpace}
+                      onChange={(e) => onKeepLetterheadSpaceChange(e.target.checked)}
+                      style={{ marginTop: "4px", width: "16px", height: "16px", cursor: "pointer" }}
+                    />
+                    <div>
+                      <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--navy)" }}>Keep Spacing for Pre-printed Letterhead</span>
+                      <p style={{ fontSize: "12px", color: "var(--muted)", marginTop: "2px" }}>
+                        Leaves blank margin spacing on the page where the header/footer would be. 
+                        Uncheck this to reclaim the space and fit more medicines per page.
+                      </p>
+                    </div>
+                  </label>
+                )}
               </div>
             </div>
           )}
