@@ -23,16 +23,17 @@ interface PrescriptionPreviewProps {
   patientAge: string;
   patientWeight: number | null;
   doctorName: string;
+  patientGender?: string;
+  patientPhone?: string;
+  patientCode?: string;
   selectedMedicines: SelectedMedicineInstance[];
   advice: string;
   followUp: string;
+  investigations?: string[];
   onClearAll: () => void;
   onPrint: () => void;
   pages: PrescriptionPageData[];
   isMeasuring: boolean;
-  showHeader: boolean;
-  showFooter: boolean;
-  keepLetterheadSpace: boolean;
 }
 
 export const PrescriptionPreview: React.FC<PrescriptionPreviewProps> = ({
@@ -42,16 +43,17 @@ export const PrescriptionPreview: React.FC<PrescriptionPreviewProps> = ({
   patientAge,
   patientWeight,
   doctorName,
+  patientGender,
+  patientPhone,
+  patientCode,
   selectedMedicines,
   advice,
   followUp,
+  investigations = [],
   onClearAll,
   onPrint,
   pages,
   isMeasuring,
-  showHeader,
-  showFooter,
-  keepLetterheadSpace
 }) => {
   return (
     <div className="preview-sticky-wrapper screen-only">
@@ -100,14 +102,15 @@ export const PrescriptionPreview: React.FC<PrescriptionPreviewProps> = ({
               patientAge={patientAge}
               patientWeight={patientWeight}
               doctorName={doctorName}
+              patientGender={patientGender}
+              patientPhone={patientPhone}
+              patientCode={patientCode}
               pageData={pageData}
               totalPages={pages.length}
               advice={advice}
               followUp={followUp}
+              investigations={investigations}
               isPreview={true}
-              showHeader={showHeader}
-              showFooter={showFooter}
-              keepLetterheadSpace={keepLetterheadSpace}
             />
           ))}
         </div>

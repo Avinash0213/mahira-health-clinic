@@ -324,6 +324,7 @@ body {
 }
 
 .col-span-12 { grid-column: span 12; }
+.col-span-8 { grid-column: span 8; }
 .col-span-6 { grid-column: span 6; }
 .col-span-4 { grid-column: span 4; }
 
@@ -1033,9 +1034,42 @@ textarea.form-control {
 
 /* === PAGE PATIENT === */
 .page-patient {
-  padding: 0 24px;
-  height: 72px; /* PATIENT_HEIGHT_PX */
+  border-top: 1px solid #d6d6d6;
+  border-bottom: 1px solid #d6d6d6;
+  padding: 10px 16px;
+  margin: 8px 0;
+  background: #fff;
+  height: 110px; /* PATIENT_HEIGHT_PX */
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.patient-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.patient-col {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 14px;
+}
+
+.patient-label {
+  font-weight: 700;
+  color: #555;
+  white-space: nowrap;
+}
+
+.patient-value {
+  color: #111;
+  font-weight: 500;
 }
 
 /* === PAGE BODY === */
@@ -1225,13 +1259,14 @@ textarea.form-control {
 
 /* PATIENT INFO (LETTERHEAD PRINT STYLE) */
 .letterhead-patient-info {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .letterhead-patient-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: 1.2fr 2fr 1.5fr;
+  row-gap: 6px;
+  column-gap: 16px;
 }
 
 .letterhead-patient-cell {
@@ -1258,9 +1293,9 @@ textarea.form-control {
 }
 
 .letterhead-doctor-row {
-  margin-top: 10px;
+  margin-top: 6px;
   border-top: 1px solid var(--border);
-  padding-top: 8px;
+  padding-top: 6px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1634,10 +1669,57 @@ textarea.form-control {
 }
 
 /* ==========================================================================
-   RESPONSIVE DESIGN (TABLET & MOBILE)
+   SEMANTIC RESPONSIVE HELPER CLASSES
    ========================================================================== */
 
-/* Tablet View: 60/40 Split (992px to 1199px) */
+/* Info banners (warning / migration) */
+.info-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Back nav link text span — hidden on mobile */
+.back-nav-text {
+  display: inline;
+}
+
+/* Home dashboard role card grid */
+.role-card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+/* Form bottom action button row */
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+/* Selected patient green banner */
+.patient-selected-banner {
+  background-color: rgba(10, 124, 107, 0.08);
+  border: 1px solid var(--primary-border);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN — COMPREHENSIVE OVERHAUL
+   Breakpoints: 1200px | 991px | 768px | 576px | 400px
+   ========================================================================== */
+
+/* ── LARGE TABLET (≤ 1200px) ─────────────────────────────────────────── */
 @media (max-width: 1200px) {
   .workspace-container {
     grid-template-columns: 1.1fr 0.9fr;
@@ -1646,83 +1728,419 @@ textarea.form-control {
   }
 }
 
-/* Large Tablet/Dual Column boundary (up to 991px) */
+/* ── TABLET (≤ 991px) ────────────────────────────────────────────────── */
 @media (max-width: 991px) {
+  /* Doctor workspace: stack left panel above preview */
   .workspace-container {
-    grid-template-columns: 1fr; /* Stack layout */
-    gap: 32px;
+    grid-template-columns: 1fr;
+    gap: 24px;
   }
-  
+
   .right-panel {
-    position: static; /* Remove stickiness */
+    position: static;
   }
 }
 
-/* Mobile View (up to 576px) */
-@media (max-width: 576px) {
+/* ── TABLET PORTRAIT (≤ 768px) ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Navbar: compress elements */
   .nav-container {
     padding: 0 16px;
   }
-  
-  .clinic-title {
+
+  /* Hide the sync status text label, keep the dot */
+  .sync-status-indicator {
+    font-size: 0; /* hide text */
+    gap: 0;
+  }
+  .sync-status-indicator .live-dot {
+    width: 10px;
+    height: 10px;
+  }
+
+  /* Shrink clinic branding slightly */
+  .clinic-brand-mahira,
+  .clinic-brand-healthcare {
     font-size: 17px;
   }
-  
+  .clinic-tagline {
+    font-size: 7px;
+  }
+
+  /* Back nav link: icon only */
+  .back-nav-text {
+    display: none;
+  }
+
+  /* Back nav: tighter padding without text */
+  .back-nav-link {
+    padding: 6px 10px !important;
+    margin-left: 12px !important;
+  }
+
+  /* Date badge: compact */
   .date-badge {
     padding: 6px 10px;
     font-size: 11.5px;
   }
-  
+
+  /* Main workspace */
   .main-workspace {
-    padding: 16px 0;
+    padding: 20px 0;
   }
-  
-  .workspace-container {
-    padding: 0 12px;
-    gap: 20px;
+
+  /* Home dashboard: stack the two role cards */
+  .role-card-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
-  
-  .card-header {
-    padding: 14px 16px;
+
+  /* Banners (warning/migration): wrap button below text */
+  .info-banner {
+    flex-direction: column;
+    align-items: flex-start;
     gap: 12px;
   }
-  
+
+  /* Card spacing */
+  .card-header {
+    padding: 14px 16px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
   .card-body {
     padding: 16px;
   }
-  
+
+  /* Form grid: col-span-8 & col-span-4 stack on tablets */
+  .col-span-8 {
+    grid-column: span 12;
+  }
+  .col-span-4 {
+    grid-column: span 12;
+  }
+
+  /* Form gaps */
   .form-grid {
     gap: 14px;
   }
-  
-  .col-span-6 {
-    grid-column: span 12; /* Stack age/weight on mobile */
+
+  /* Doctor page: queue card header wraps properly */
+  .card-header div[style*="display: flex"][style*="gap: 8px"] {
+    flex-shrink: 0;
   }
-  
+
+  /* Doctor page: queue button row */
+  .card-header > div:last-child {
+    gap: 8px;
+  }
+
+  /* Modal: full width on tablet */
+  .modal-container {
+    max-width: 100% !important;
+    width: calc(100vw - 32px);
+    max-height: 95vh;
+    border-radius: var(--radius-md);
+  }
+
+  /* Modal backdrop padding */
+  .modal-backdrop {
+    padding: 16px;
+    align-items: flex-end;
+  }
+
+  /* Modal tabs: allow wrapping */
+  .modal-tabs {
+    overflow-x: auto;
+    padding: 0 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal-tab-btn {
+    padding: 12px 14px;
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+
+  /* Modal body */
+  .modal-body {
+    padding: 16px;
+  }
+
+  /* Settings actions row: stack on small screens */
+  .settings-actions-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .settings-actions-row .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Medicine grid: 2 columns on tablet */
   .medicine-grid {
-    grid-template-columns: 1fr; /* 1 column of medicines */
+    grid-template-columns: repeat(2, 1fr);
   }
-  
+}
+
+/* ── MOBILE (≤ 576px) ────────────────────────────────────────────────── */
+@media (max-width: 576px) {
+  /* Navbar */
+  .nav-container {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  /* Clinic name: slightly smaller */
+  .clinic-brand-mahira,
+  .clinic-brand-healthcare {
+    font-size: 15px;
+  }
+
+  /* Main workspace */
+  .main-workspace {
+    padding: 16px 0;
+  }
+
+  /* Workspace container */
+  .workspace-container {
+    padding: 0 12px;
+    gap: 16px;
+  }
+
+  /* Top-level page wrapper padding */
+  div[style*="maxWidth: \"1400px\""] {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  /* Form grid: ALL col-span variants become full-width */
+  .col-span-12,
+  .col-span-8,
+  .col-span-6,
+  .col-span-4 {
+    grid-column: span 12;
+  }
+
+  .form-grid {
+    gap: 12px;
+  }
+
+  /* Card headers */
+  .card-header {
+    padding: 12px 14px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  /* Card header: queue bar action buttons stack */
+  .card-header > div[style*="display: flex"] {
+    flex-wrap: wrap;
+  }
+
+  .card-body {
+    padding: 14px;
+  }
+
+  /* Receptionist page card */
+  div.medical-card[style*="maxWidth: \"700px\""] {
+    border-radius: var(--radius-md);
+  }
+
+  /* Doctor queue cards: horizontal scroll, minimum width */
+  div[style*="overflowX: \"auto\""] button[style*="minWidth: \"200px\""] {
+    min-width: 170px !important;
+    padding: 8px 12px !important;
+  }
+
+  /* Doctor queue bar: prevent extreme height */
+  div[style*="overflowX: auto"] {
+    gap: 8px !important;
+  }
+
+  /* Selected med cards */
+  .selected-med-card-header {
+    padding: 12px 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .selected-med-header-right {
+    gap: 8px;
+  }
+
+  .selected-med-card-body {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  /* Med input rows: stack vertically */
   .med-inputs-row {
     flex-direction: column;
     gap: 12px;
   }
-  
+
+  /* Frequency segmented control: tighter */
   .frequency-pill-btn {
-    padding: 6px 2px;
+    padding: 7px 2px;
   }
-  
   .freq-code {
-    font-size: 11px;
+    font-size: 11.5px;
   }
-  
   .freq-desc-mini {
-    font-size: 8px;
-    display: none; /* Hide descriptions to save space */
+    display: none;
   }
-  
-  .prescription-canvas {
-    padding: 16px;
+
+  /* Medicine chip grid: single column */
+  .medicine-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Medicine grid wrapper: smaller max height */
+  .medicine-grid-wrapper {
+    max-height: 200px;
+  }
+
+  /* Legend grid: single column */
+  .legend-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* History items: stack actions below text */
+  .history-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+  .history-item-actions {
+    align-self: flex-end;
+  }
+
+  /* Form actions: stack vertically on mobile */
+  .form-actions {
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+  .form-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Preview actions bar */
+  .preview-actions {
+    flex-direction: column;
+    padding: 12px 16px;
+    gap: 10px;
+  }
+  .preview-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Modal: slide up from bottom, full width */
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92vh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
+    animation: modal-slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes modal-slide-up {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .modal-header {
+    padding: 14px 16px;
+  }
+  .modal-header-title h3 {
+    font-size: 16px;
+  }
+
+  .modal-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 8px;
+  }
+  .modal-tab-btn {
+    padding: 10px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .modal-body {
+    padding: 14px;
+  }
+
+  /* Settings actions */
+  .settings-actions-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .settings-actions-row .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Home page dashboard */
+  div[style*="maxWidth: \"800px\""][style*="margin: \"60px auto\""] {
+    margin-top: 32px !important;
+    padding: 0 12px !important;
+  }
+  div[style*="margin: \"60px auto\""] h2 {
+    font-size: 24px !important;
+  }
+
+  /* Med form rows: stack */
+  .med-form-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Patient banner: wrap for small screens */
+  .patient-selected-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ── VERY SMALL MOBILE (≤ 400px) ─────────────────────────────────────── */
+@media (max-width: 400px) {
+  /* Navbar: hide date badge on the smallest screens */
+  .date-badge {
+    display: none;
+  }
+
+  /* Navbar: hide sync status entirely */
+  .sync-status-indicator {
+    display: none !important;
+  }
+
+  .clinic-brand-mahira,
+  .clinic-brand-healthcare {
+    font-size: 14px;
+  }
+
+  .card-header {
+    padding: 10px 12px;
+  }
+  .card-body {
+    padding: 12px;
+  }
+
+  .btn {
+    font-size: 13px;
+    padding: 8px 14px;
+  }
+
+  .frequency-segmented-control {
+    flex-wrap: nowrap;
   }
 }
 
@@ -2144,3 +2562,215 @@ textarea.form-control {
   color: var(--muted);
 }
 
+/* ==========================================================================
+   SETTINGS MODAL — RESPONSIVE (must come AFTER base settings CSS above)
+   ========================================================================== */
+
+/* Fix table wrapper to clip horizontally */
+.medicine-table-wrapper {
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+/* Settings medicine table: allow horizontal scroll, don't force full width */
+.settings-medicine-table {
+  min-width: 360px;
+}
+
+/* ── TABLET: ≤ 991px — stack medicine form above table ─────────────── */
+@media (max-width: 991px) {
+  .grid-split {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .medicine-form-col {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding-right: 0;
+    padding-bottom: 20px;
+  }
+
+  .medicine-list-col {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+/* ── TABLET PORTRAIT: ≤ 768px ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  .modal-container {
+    max-width: calc(100vw - 32px) !important;
+    width: calc(100vw - 32px);
+    max-height: 92vh;
+    border-radius: var(--radius-md);
+  }
+
+  .modal-backdrop {
+    padding: 16px;
+    align-items: flex-end;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  /* Tabs: horizontal scroll with visible scrollbar hidden */
+  .modal-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 12px;
+    scrollbar-width: none; /* Firefox */
+  }
+  .modal-tabs::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
+  .modal-tab-btn {
+    padding: 12px 14px;
+    font-size: 12.5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Settings actions: stack */
+  .settings-actions-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .settings-actions-row .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Medicine grid: 2 columns on tablet */
+  .medicine-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Restore defaults info box: wrap */
+  .restore-defaults-box {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+/* ── MOBILE: ≤ 576px ────────────────────────────────────────────────── */
+@media (max-width: 576px) {
+  /* Modal: full-width sheet from bottom */
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92vh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
+    animation: settings-modal-up 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes settings-modal-up {
+    from { transform: translateY(24px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .modal-header {
+    padding: 14px 16px;
+  }
+  .modal-header-title h3 {
+    font-size: 15px;
+  }
+
+  /* Tabs: stack vertically for long labels */
+  .modal-tabs {
+    flex-direction: column;
+    padding: 8px 12px;
+    gap: 2px;
+    overflow-x: unset;
+    border-bottom: 1px solid var(--border);
+    background-color: var(--primary-light);
+  }
+  .modal-tab-btn {
+    border-bottom: none !important;
+    border-left: 3px solid transparent;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    white-space: normal;
+  }
+  .modal-tab-btn.active {
+    border-left-color: var(--primary);
+    background-color: rgba(10, 124, 107, 0.12);
+    color: var(--primary);
+  }
+
+  .modal-body {
+    padding: 14px;
+  }
+
+  /* Medicine form: stack form rows */
+  .med-form-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Segmented inline control: wrap */
+  .segmented-inline {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .seg-btn {
+    flex: 1 1 45%;
+    white-space: normal;
+    text-align: center;
+    padding: 8px 6px;
+    font-size: 11.5px;
+  }
+
+  /* Medicine list: remove fixed height constraint on mobile */
+  .medicine-list-col {
+    max-height: none;
+    overflow: visible;
+  }
+  .medicine-table-wrapper {
+    max-height: 260px;
+    overflow-y: auto;
+    overflow-x: auto;
+  }
+
+  /* Settings table: compact on mobile */
+  .settings-medicine-table th,
+  .settings-medicine-table td {
+    padding: 8px 8px;
+    font-size: 11px;
+  }
+
+  /* Hide the "Type" column on mobile to save space */
+  .settings-medicine-table th:nth-child(3),
+  .settings-medicine-table td:nth-child(3) {
+    display: none;
+  }
+
+  /* Settings info box: ensure it wraps */
+  .settings-info-box {
+    font-size: 12px;
+  }
+
+  /* Settings actions */
+  .settings-actions-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .settings-actions-row .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Medicine grid: single column */
+  .medicine-grid {
+    grid-template-columns: 1fr;
+  }
+}

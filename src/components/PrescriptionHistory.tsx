@@ -10,6 +10,7 @@ export interface SavedPrescription {
   selectedMedicines: any[];
   advice: string;
   followUp: string;
+  investigations?: string[];
 }
 
 interface PrescriptionHistoryProps {
@@ -81,6 +82,26 @@ export const PrescriptionHistory: React.FC<PrescriptionHistoryProps> = ({
                   <span className="bullet-dot"></span>
                   <span>Meds: {rx.selectedMedicines.length}</span>
                 </div>
+                {rx.investigations && rx.investigations.length > 0 && (
+                  <div style={{ marginTop: "6px", display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                    {rx.investigations.map((inv) => (
+                      <span
+                        key={inv}
+                        style={{
+                          fontSize: "10px",
+                          padding: "2px 7px",
+                          borderRadius: "20px",
+                          backgroundColor: "rgba(10, 124, 107, 0.08)",
+                          color: "var(--primary-dark)",
+                          border: "1px solid var(--primary-border)",
+                          fontWeight: 500
+                        }}
+                      >
+                        {inv}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="history-item-actions">
                 <button

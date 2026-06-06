@@ -14,17 +14,19 @@ export function paginatePrescriptionContent(params: {
   contentBudgetPx: number;    // CONTENT_BUDGET_PX from constants
   adviceHeight: number;       // px height of rendered advice block, 0 if absent
   followUpHeight: number;     // px height of rendered follow-up block, 0 if absent
+  investigationsHeight: number; // px height of investigations block, 0 if absent
 }): PrescriptionPageData[] {
-  const { medicines, medicineHeights, contentBudgetPx, adviceHeight, followUpHeight } = params;
+  const { medicines, medicineHeights, contentBudgetPx, adviceHeight, followUpHeight, investigationsHeight } = params;
+  const FINDINGS_SPACE_PX = 420;
 
-  // 4. If medicines is empty: return single page with medicines: [],
-  //    showAdvice and showFollowUp based on whether advice/followUp exist.
+  // If medicines is empty: return single page with medicines: [],
+  // showAdvice and showFollowUp based on whether advice/followUp/investigations exist.
   if (medicines.length === 0) {
     return [
       {
         pageNumber: 1,
         medicines: [],
-        showAdvice: adviceHeight > 0,
+        showAdvice: (adviceHeight > 0 || investigationsHeight > 0),
         showFollowUp: followUpHeight > 0,
         globalMedStartIndex: 0,
       },
@@ -40,11 +42,11 @@ export function paginatePrescriptionContent(params: {
   for (let i = 0; i < medicines.length; i++) {
     const med = medicines[i];
     const height = medicineHeights[i] ?? 60; // fallback if height missing
+    const pageBudget = pageNumber === 1 ? contentBudgetPx - FINDINGS_SPACE_PX : contentBudgetPx;
 
-    // When accumulated + medicineHeights[i] > contentBudgetPx:
+    // When accumulated + medicineHeights[i] > pageBudget:
     // close current page, open new page, reset accumulator.
-    // Ensure we always place at least one medicine per page to avoid infinite loops if a single item exceeds the budget.
-    if (currentPageMeds.length > 0 && currentAccumulator + height > contentBudgetPx) {
+    if (currentPageMeds.length > 0 && currentAccumulator + height > pageBudget) {
       pages.push({
         pageNumber,
         medicines: currentPageMeds,
@@ -62,16 +64,17 @@ export function paginatePrescriptionContent(params: {
     }
   }
 
-  // After all medicines placed: check if adviceHeight + followUpHeight
+  // After all medicines placed: check if adviceHeight + followUpHeight + investigationsHeight
   // fits in remaining space on last page.
-  const remainingSpace = contentBudgetPx - currentAccumulator;
-  const totalExtraHeight = adviceHeight + followUpHeight;
+  const lastPageBudget = pageNumber === 1 ? contentBudgetPx - FINDINGS_SPACE_PX : contentBudgetPx;
+  const remainingSpace = lastPageBudget - currentAccumulator;
+  const totalExtraHeight = adviceHeight + followUpHeight + investigationsHeight;
 
   if (remainingSpace >= totalExtraHeight) {
     pages.push({
       pageNumber,
       medicines: currentPageMeds,
-      showAdvice: adviceHeight > 0,
+      showAdvice: (adviceHeight > 0 || investigationsHeight > 0),
       showFollowUp: followUpHeight > 0,
       globalMedStartIndex,
     });
@@ -90,7 +93,7 @@ export function paginatePrescriptionContent(params: {
     pages.push({
       pageNumber,
       medicines: [],
-      showAdvice: adviceHeight > 0,
+      showAdvice: (adviceHeight > 0 || investigationsHeight > 0),
       showFollowUp: followUpHeight > 0,
       globalMedStartIndex,
     });

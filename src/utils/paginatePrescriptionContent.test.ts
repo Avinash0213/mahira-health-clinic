@@ -23,7 +23,8 @@ describe('paginatePrescriptionContent', () => {
       medicineHeights: [],
       contentBudgetPx: 200,
       adviceHeight: 0,
-      followUpHeight: 0
+      followUpHeight: 0,
+      investigationsHeight: 0
     });
     expect(result).toHaveLength(1);
     expect(result[0].medicines).toHaveLength(0);
@@ -37,7 +38,8 @@ describe('paginatePrescriptionContent', () => {
       medicineHeights: [],
       contentBudgetPx: 200,
       adviceHeight: 50,
-      followUpHeight: 0
+      followUpHeight: 0,
+      investigationsHeight: 0
     });
     expect(result).toHaveLength(1);
     expect(result[0].medicines).toHaveLength(0);
@@ -50,9 +52,10 @@ describe('paginatePrescriptionContent', () => {
     const result = paginatePrescriptionContent({
       medicines,
       medicineHeights: [60],
-      contentBudgetPx: 200,
+      contentBudgetPx: 620,
       adviceHeight: 50,
-      followUpHeight: 30
+      followUpHeight: 30,
+      investigationsHeight: 0
     });
     expect(result).toHaveLength(1);
     expect(result[0].medicines).toHaveLength(1);
@@ -66,9 +69,10 @@ describe('paginatePrescriptionContent', () => {
     const result = paginatePrescriptionContent({
       medicines,
       medicineHeights: [60, 60, 80],
-      contentBudgetPx: 200,
+      contentBudgetPx: 620,
       adviceHeight: 0,
-      followUpHeight: 0
+      followUpHeight: 0,
+      investigationsHeight: 0
     });
     expect(result).toHaveLength(1);
     expect(result[0].medicines).toHaveLength(3);
@@ -81,9 +85,10 @@ describe('paginatePrescriptionContent', () => {
     const result = paginatePrescriptionContent({
       medicines,
       medicineHeights: [60, 80, 70],
-      contentBudgetPx: 200,
+      contentBudgetPx: 620,
       adviceHeight: 0,
-      followUpHeight: 0
+      followUpHeight: 0,
+      investigationsHeight: 0
     });
     expect(result).toHaveLength(2);
     expect(result[0].medicines).toHaveLength(2);
@@ -97,9 +102,10 @@ describe('paginatePrescriptionContent', () => {
     const result = paginatePrescriptionContent({
       medicines,
       medicineHeights: [60, 60],
-      contentBudgetPx: 200,
+      contentBudgetPx: 620,
       adviceHeight: 50,
-      followUpHeight: 30
+      followUpHeight: 30,
+      investigationsHeight: 0
     });
     expect(result).toHaveLength(1);
     expect(result[0].medicines).toHaveLength(2);
@@ -112,9 +118,10 @@ describe('paginatePrescriptionContent', () => {
     const result = paginatePrescriptionContent({
       medicines,
       medicineHeights: [60, 60],
-      contentBudgetPx: 200,
+      contentBudgetPx: 620,
       adviceHeight: 50,
-      followUpHeight: 31
+      followUpHeight: 31,
+      investigationsHeight: 0
     });
     expect(result).toHaveLength(2);
     expect(result[0].medicines).toHaveLength(2);
@@ -132,9 +139,10 @@ describe('paginatePrescriptionContent', () => {
     const result = paginatePrescriptionContent({
       medicines,
       medicineHeights: heights,
-      contentBudgetPx: 200,
+      contentBudgetPx: 620,
       adviceHeight: 10,
-      followUpHeight: 0
+      followUpHeight: 0,
+      investigationsHeight: 0
     });
     expect(result).toHaveLength(34);
     expect(result[0].medicines).toHaveLength(3);

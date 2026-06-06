@@ -15,23 +15,27 @@ export function useMeasuredHeights(
   medicines: SelectedMedicineInstance[],
   advice: string,
   followUp: string,
+  investigations: string[],
   contentWidthPx: number,
   patientWeight: number | null
 ): {
   medicineHeights: number[];
   adviceHeight: number;
   followUpHeight: number;
+  investigationsHeight: number;
   isMeasuring: boolean;
 } {
   const [state, setState] = useState<{
     medicineHeights: number[];
     adviceHeight: number;
     followUpHeight: number;
+    investigationsHeight: number;
     isMeasuring: boolean;
   }>({
     medicineHeights: [],
     adviceHeight: 0,
     followUpHeight: 0,
+    investigationsHeight: 0,
     isMeasuring: false
   });
 
@@ -64,6 +68,7 @@ export function useMeasuredHeights(
         medicineHeights: medicines.map(() => FALLBACK_ROW_HEIGHT_PX),
         adviceHeight: advice ? FALLBACK_ROW_HEIGHT_PX : 0,
         followUpHeight: followUp ? FALLBACK_ROW_HEIGHT_PX : 0,
+        investigationsHeight: investigations && investigations.length > 0 ? FALLBACK_ROW_HEIGHT_PX : 0,
         isMeasuring: false
       });
       return;
@@ -157,10 +162,29 @@ export function useMeasuredHeights(
         container.appendChild(followUpEl);
       }
 
+      // Render Investigations block
+      let investigationsEl: HTMLDivElement | null = null;
+      if (investigations && investigations.length > 0) {
+        investigationsEl = document.createElement("div");
+        investigationsEl.className = "canvas-section-box";
+        investigationsEl.innerHTML = `
+          <span class="canvas-section-title">INVESTIGATIONS</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px;">
+            ${investigations.map(inv => `
+              <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; border: 1px solid var(--primary-border, #a7d7cf); background-color: rgba(10,124,107,0.06); color: var(--primary-dark, #0a5c52); font-size: 9.5px; font-weight: 600;">
+                ${inv}
+              </span>
+            `).join('')}
+          </div>
+        `;
+        container.appendChild(investigationsEl);
+      }
+
       // Measure
       const medicineHeights = rowElements.map(el => el.getBoundingClientRect().height);
       const adviceHeight = adviceEl ? adviceEl.getBoundingClientRect().height : 0;
       const followUpHeight = followUpEl ? followUpEl.getBoundingClientRect().height : 0;
+      const investigationsHeight = investigationsEl ? investigationsEl.getBoundingClientRect().height : 0;
 
       // Cleanup DOM
       document.body.removeChild(container);
@@ -169,6 +193,7 @@ export function useMeasuredHeights(
         medicineHeights,
         adviceHeight,
         followUpHeight,
+        investigationsHeight,
         isMeasuring: false
       });
     });
@@ -177,7 +202,7 @@ export function useMeasuredHeights(
       active = false;
       cancelAnimationFrame(frameId);
     };
-  }, [medicines, advice, followUp, contentWidthPx, patientWeight, resizeTrigger]);
+  }, [medicines, advice, followUp, investigations, contentWidthPx, patientWeight, resizeTrigger]);
 
   return state;
 }

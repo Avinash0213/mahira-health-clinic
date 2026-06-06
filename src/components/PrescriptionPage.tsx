@@ -1,6 +1,5 @@
 import React from "react";
 import { calculateDose } from "../utils/doseCalculator";
-import { MahiraLogo } from "./MahiraLogo";
 import type { PrescriptionPageData } from "../utils/paginatePrescriptionContent";
 
 interface PrescriptionPageProps {
@@ -11,18 +10,18 @@ interface PrescriptionPageProps {
   patientAge: string;
   patientWeight: number | null;
   doctorName: string;
+  patientGender?: string;
+  patientPhone?: string;
+  patientCode?: string;
   // Per-page content
   pageData: PrescriptionPageData;
   totalPages: number;
-  // Full prescription data needed for advice/followup
+  // Full prescription data needed for advice/followup/investigations
   advice: string;
   followUp: string;
+  investigations?: string[];
   // Render context
   isPreview?: boolean;   // true = screen preview (scaled down), false = print size
-  // Print Customization
-  showHeader?: boolean;
-  showFooter?: boolean;
-  keepLetterheadSpace?: boolean;
 }
 
 const FREQUENCY_LABELS: Record<string, string> = {
@@ -34,93 +33,94 @@ const FREQUENCY_LABELS: Record<string, string> = {
 };
 
 export const PrescriptionPage: React.FC<PrescriptionPageProps> = ({
-  rxNumber,
+  rxNumber: _rxNumber,
   currentDate,
   patientName,
   patientAge,
   patientWeight,
-  doctorName,
+  doctorName: _doctorName,
+  patientGender,
+  patientPhone: _patientPhone,
+  patientCode,
   pageData,
-  totalPages,
+  totalPages: _totalPages,
   advice,
   followUp,
+  investigations = [],
   isPreview = false,
-  showHeader = true,
-  showFooter = true,
-  keepLetterheadSpace = true
 }) => {
   return (
     <div className="print-page">
-      {/* ── HEADER ── never position:fixed, always static */}
-      <div className="page-header" style={!showHeader ? (keepLetterheadSpace ? { visibility: "hidden" } : { display: "none" }) : {}}>
-        <div className="letterhead-header">
-          <MahiraLogo size={isPreview ? 56 : 80} />
-          <div className="letterhead-title-container">
-            <span className="letterhead-brand-mahira">Mahira</span>
-            <div className="letterhead-right-group">
-              <span className="letterhead-brand-healthcare">Health Care</span>
-              <div className="letterhead-underline-row">
-                <div className="letterhead-line"></div>
-                <span className="letterhead-tagline">We Care For You</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+
 
       {/* ── PATIENT DETAILS ── */}
       <div className="page-patient">
-        <div className="letterhead-patient-info">
-          <div className="letterhead-patient-grid">
-            <div className="letterhead-patient-cell">
-              <span className="letterhead-patient-label">Patient Name</span>
-              <span className="letterhead-patient-value">
-                {patientName || (isPreview ? <span className="text-placeholder">Enter Name</span> : "—")}
-              </span>
-            </div>
-            <div className="letterhead-patient-cell">
-              <span className="letterhead-patient-label">Age</span>
-              <span className="letterhead-patient-value">
-                {patientAge || (isPreview ? <span className="text-placeholder">Enter Age</span> : "—")}
-              </span>
-            </div>
-            <div className="letterhead-patient-cell">
-              <span className="letterhead-patient-label">Weight</span>
-              <span className="letterhead-patient-value">
-                {patientWeight !== null && patientWeight > 0 ? (
-                  `${patientWeight} kg`
-                ) : (
-                  isPreview ? <span className="text-placeholder">Enter Weight</span> : "—"
-                )}
-              </span>
-            </div>
+        {/* Row 1 */}
+        <div className="patient-row">
+          <div className="patient-col">
+            <span className="patient-label">Patient:</span>
+            <span className="patient-value">
+              {patientName || (isPreview ? <span className="text-placeholder">Enter Name</span> : "—")}
+            </span>
           </div>
-          
-          <div className="letterhead-doctor-row font-mono text-muted" style={{ fontSize: isPreview ? "9px" : "10.5px" }}>
-            <div>
-              <strong>Rx No:</strong> <span className="text-dark font-medium">{rxNumber}</span>
-            </div>
-            <div>
-              <strong>Date:</strong> <span className="text-dark font-medium">{currentDate}</span>
-            </div>
-            {doctorName && (
-              <div>
-                <strong>Pediatrician:</strong> <span className="text-dark font-medium">Dr. {doctorName}</span>
-              </div>
-            )}
-            <div style={{ marginLeft: "auto" }}>
-              <strong>Page:</strong> <span className="text-dark font-medium">{pageData.pageNumber} / {totalPages}</span>
-            </div>
+          <div className="patient-col">
+            <span className="patient-label">Date:</span>
+            <span className="patient-value">
+              {currentDate || "—"}
+            </span>
+          </div>
+        </div>
+
+        {/* Row 2 */}
+        <div className="patient-row">
+          <div className="patient-col">
+            <span className="patient-label">Age/Sex:</span>
+            <span className="patient-value">
+              {patientAge || (isPreview ? <span className="text-placeholder">Enter Age</span> : "—")}
+              {patientGender ? ` / ${patientGender}` : ""}
+            </span>
+          </div>
+          <div className="patient-col">
+            <span className="patient-label">Weight:</span>
+            <span className="patient-value">
+              {patientWeight !== null && patientWeight > 0 ? (
+                `${patientWeight} kg`
+              ) : (
+                isPreview ? <span className="text-placeholder">Enter Weight</span> : "—"
+              )}
+            </span>
+          </div>
+        </div>
+
+        {/* Row 3 */}
+        <div className="patient-row">
+          <div className="patient-col">
+            <span className="patient-label">Patient ID:</span>
+            <span className="patient-value">
+              {patientCode || (isPreview ? <span className="text-placeholder">Enter ID</span> : "—")}
+            </span>
           </div>
         </div>
       </div>
 
       {/* ── BODY: watermark + medicines ── */}
       <div className="page-body">
-        {/* Watermark: absolute within page-body, NOT fixed */}
-        <div className="page-watermark">
-          <MahiraLogo size={isPreview ? 220 : 340} />
-        </div>
+        {pageData.pageNumber === 1 && (
+          <div className="first-page-findings-space" style={{
+            height: "420px",
+            borderBottom: "1.5px dashed var(--border)",
+            padding: "12px 0",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-start",
+            color: "var(--muted)",
+            boxSizing: "border-box",
+            position: "relative",
+            zIndex: 1
+          }}>
+            <span style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--primary)" }}>Doctor's Findings / Notes</span>
+          </div>
+        )}
 
         {/* Content: z-index: 1, position: relative */}
         <div className="page-content">
@@ -174,9 +174,34 @@ export const PrescriptionPage: React.FC<PrescriptionPageProps> = ({
             );
           })}
 
+          {pageData.showAdvice && investigations.length > 0 && (
+            <div className="canvas-section-box">
+              <span className="canvas-section-title">INVESTIGATIONS</span>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "3px" }}>
+                {investigations.map((inv, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      display: "inline-block",
+                      padding: isPreview ? "1px 6px" : "2px 8px",
+                      borderRadius: "12px",
+                      border: "1px solid var(--primary-border, #a7d7cf)",
+                      backgroundColor: "rgba(10,124,107,0.06)",
+                      color: "var(--primary-dark, #0a5c52)",
+                      fontSize: isPreview ? "8px" : "9.5px",
+                      fontWeight: 600
+                    }}
+                  >
+                    {inv}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {pageData.showAdvice && advice && (
             <div className="canvas-section-box">
-              <span className="canvas-section-title">ADVICE & INSTRUCTIONS</span>
+              <span className="canvas-section-title">ADVICE &amp; INSTRUCTIONS</span>
               <p className="canvas-section-content">{advice}</p>
             </div>
           )}
@@ -190,76 +215,7 @@ export const PrescriptionPage: React.FC<PrescriptionPageProps> = ({
         </div>
       </div>
 
-      {/* ── BOTTOM UNIT: pushed to page bottom via margin-top: auto ── */}
-      <div className="page-bottom">
-        <div className="page-signature">
-          <div className="letterhead-sig-container">
-            <div className="letterhead-sig-box">
-              <div className="letterhead-sig-line"></div>
-              <div className="letterhead-sig-label">Doctor Signature</div>
-              <div className="letterhead-sig-stamp">Stamp & Seal</div>
-            </div>
-          </div>
-        </div>
-        {/* BANNER — sits directly above footer, no negative margin */}
-        <div className="letterhead-pill-banner">
-          <span className="letterhead-pill-validity">
-            (Prescription Valid For Only 3 Days)
-          </span>
-          <span className="letterhead-pill-appointment">
-            For Appointment Call On : 0120-2978933
-          </span>
-        </div>
 
-        {/* FOOTER STRIP */}
-        <div className="letterhead-footer" style={!showFooter ? (keepLetterheadSpace ? { visibility: "hidden" } : { display: "none" }) : {}}>
-          <div className="letterhead-footer-content">
-
-            {/* LEFT: address + email + legal note stacked */}
-            <div className="letterhead-footer-left">
-              <div className="letterhead-footer-item">
-                <span className="letterhead-footer-icon">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                    <circle cx="12" cy="10" r="3"></circle>
-                  </svg>
-                </span>
-                <span>
-                  Arya Nagar, Behind Indian Petrol Pump,<br />
-                  Railway Road, Dadri, Greater Noida, G.B. Nagar (U.P.)
-                </span>
-              </div>
-              <div className="letterhead-footer-item">
-                <span className="letterhead-footer-icon">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                    <polyline points="22,6 12,13 2,6"></polyline>
-                  </svg>
-                </span>
-                <span>Email: mahirahealthcare2025@gmail.com</span>
-              </div>
-            </div>
-
-            {/* RIGHT: OPD timings + Sunday badge */}
-            <div className="letterhead-footer-right">
-              <div className="letterhead-opd-title">OPD TIMING:-</div>
-              <div className="letterhead-opd-time">
-                Morning 8:00 am to 3:00 pm (Monday to Saturday)
-              </div>
-              <div className="letterhead-opd-time">
-                Evening 8:00 pm to 10:00 pm (Monday to Saturday)
-              </div>
-              <div className="letterhead-opd-closed">
-                Sunday - Evening Closed
-              </div>
-            </div>
-
-          </div>
-          <div className="letterhead-legal-note">
-            (Not Valid for any Medico-legal purpose)
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
