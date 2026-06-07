@@ -177,23 +177,11 @@ export const PrescriptionPage: React.FC<PrescriptionPageProps> = ({
           {pageData.showAdvice && investigations.length > 0 && (
             <div className="canvas-section-box">
               <span className="canvas-section-title">INVESTIGATIONS</span>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "3px" }}>
+              <div className="canvas-section-content" style={{ marginTop: "4px" }}>
                 {investigations.map((inv, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      display: "inline-block",
-                      padding: isPreview ? "1px 6px" : "2px 8px",
-                      borderRadius: "12px",
-                      border: "1px solid var(--primary-border, #a7d7cf)",
-                      backgroundColor: "rgba(10,124,107,0.06)",
-                      color: "var(--primary-dark, #0a5c52)",
-                      fontSize: isPreview ? "8px" : "9.5px",
-                      fontWeight: 600
-                    }}
-                  >
+                  <div key={i} style={{ marginBottom: "2px" }}>
                     {inv}
-                  </span>
+                  </div>
                 ))}
               </div>
             </div>
