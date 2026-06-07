@@ -80,7 +80,7 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
     return localStorage.getItem("mhc_default_doctor_name") || "Faisal";
   });
   const [selectedMedicines, setSelectedMedicines] = useState<SelectedMedicineInstance[]>([]);
-  const [commonDuration, setCommonDuration] = useState<string>("5 days");
+  const [commonDuration, setCommonDuration] = useState<number | "">(5);
   const [advice, setAdvice] = useState<string>("");
   const [followUp, setFollowUp] = useState<string>("");
   const [investigations, setInvestigations] = useState<string[]>([]);
@@ -361,7 +361,7 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
     setPatientPhone(freshPatient.phone || "");
     setPatientCode(freshPatient.patient_code || "");
     setSelectedMedicines([]);
-    setCommonDuration("5 days");
+    setCommonDuration(5);
     setAdvice("");
     setFollowUp("");
     setInvestigations([]);
@@ -518,7 +518,7 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
       unit: med.unit,
       maxDose: med.maxDose,
       frequency: "BD",
-      duration: commonDuration,
+      duration: commonDuration !== "" ? `${commonDuration} days` : "5 days",
       overrideDose: null,
       instructions: "After meals"
     };
@@ -526,10 +526,10 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
   };
 
   // Update common duration for all current medicines
-  const handleCommonDurationChange = (val: string) => {
+  const handleCommonDurationChange = (val: number | "") => {
     setCommonDuration(val);
     setSelectedMedicines((prev) =>
-      prev.map((m) => ({ ...m, duration: val }))
+      prev.map((m) => ({ ...m, duration: val !== "" ? `${val} days` : "" }))
     );
   };
 
@@ -550,7 +550,7 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
     const confirmClear = window.confirm("Are you sure you want to clear the current consultation?");
     if (confirmClear) {
       setSelectedMedicines([]);
-      setCommonDuration("5 days");
+      setCommonDuration(5);
       setAdvice("");
       setFollowUp("");
       setInvestigations([]);
@@ -1012,13 +1012,17 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
               {!collapsedSections.selectedMeds && (
                 <div className="card-body">
                   <div className="form-group" style={{ marginBottom: "20px", maxWidth: "320px" }}>
-                    <label className="form-label font-medium" style={{ fontSize: "13px", color: "var(--navy)" }}>Default Duration for All Medications</label>
+                    <label className="form-label font-medium" style={{ fontSize: "13px", color: "var(--navy)" }}>Default Duration (Days)</label>
                     <input
-                      type="text"
+                      type="number"
+                      min="1"
                       className="form-control form-control-sm"
-                      placeholder="e.g., 5 days"
+                      placeholder="e.g., 5"
                       value={commonDuration}
-                      onChange={(e) => handleCommonDurationChange(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value === "" ? "" : parseInt(e.target.value, 10);
+                        handleCommonDurationChange(val);
+                      }}
                     />
                   </div>
                   {selectedMedicines.length > 0 ? (
