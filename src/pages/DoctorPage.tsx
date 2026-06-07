@@ -1270,7 +1270,7 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
               patientCode={patientCode}
               selectedMedicines={selectedMedicines}
               advice={advice}
-              followUp={followUp}
+              followUp={followUpDays !== "" ? `${followUpDays} days` : ""}
               investigations={investigations}
               onClearAll={handleClearAll}
               onPrint={handlePrint}
