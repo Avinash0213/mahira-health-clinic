@@ -504,6 +504,119 @@ textarea.form-control {
   transform: scale(1.1);
 }
 
+/* INVESTIGATION SELECTOR */
+.investigation-category-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.category-filter-chip {
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--border);
+  background-color: var(--white);
+  color: var(--navy);
+  transition: var(--transition);
+  outline: none;
+}
+
+.category-filter-chip:hover:not(.active) {
+  border-color: var(--primary-border);
+  background-color: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.category-filter-chip.active {
+  background-color: var(--primary);
+  color: var(--white);
+  border-color: var(--primary);
+}
+
+.investigation-chip-selected {
+  border-color: var(--primary) !important;
+  background-color: rgba(10, 124, 107, 0.07) !important;
+}
+
+.investigation-chip-selected .medicine-chip-add-icon {
+  opacity: 1 !important;
+  color: var(--primary) !important;
+}
+
+.investigation-custom-input-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  margin-bottom: 14px;
+}
+
+.investigation-ordered-section {
+  margin-top: 4px;
+}
+
+.investigation-ordered-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.investigation-ordered-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.investigation-ordered-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px 4px 12px;
+  border-radius: 20px;
+  background-color: rgba(10, 124, 107, 0.09);
+  border: 1px solid var(--primary-border);
+  color: var(--primary-dark);
+  font-size: 12.5px;
+  font-weight: 600;
+  animation: fadeInTag 0.2s ease;
+}
+
+@keyframes fadeInTag {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.investigation-tag-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--primary-dark);
+  opacity: 0.6;
+  padding: 0;
+  line-height: 1;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  transition: var(--transition);
+}
+
+.investigation-tag-remove:hover {
+  opacity: 1;
+  color: var(--danger);
+}
+
 /* SELECTED MEDICINES (SECTION 3) */
 .selected-meds-list {
   display: flex;
@@ -1657,6 +1770,30 @@ textarea.form-control {
 
 .btn-new-patient:active:not(:disabled) {
   transform: translateY(0);
+}
+
+.btn-success {
+  background-color: #0d9488;
+  color: var(--white);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.15);
+}
+
+.btn-success:hover:not(:disabled) {
+  background-color: #0f766e;
+  box-shadow: 0 4px 18px rgba(13, 148, 136, 0.25);
+  transform: translateY(-1px);
+}
+
+.btn-success:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-success:disabled {
+  background-color: var(--border);
+  color: var(--muted);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 /* SCREEN VS PRINT-ONLY visibility rules */

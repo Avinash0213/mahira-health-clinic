@@ -71,6 +71,20 @@ export const visitService = {
           onChange();
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "vitals" },
+        () => {
+          onChange();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "patients" },
+        () => {
+          onChange();
+        }
+      )
       .subscribe();
 
     return () => {

@@ -6,6 +6,7 @@ import { PrescriptionPreview } from "../components/PrescriptionPreview";
 import type { SelectedMedicineInstance } from "../components/PrescriptionPreview";
 import { LatinLegend } from "../components/LatinLegend";
 import { PrescriptionHistory } from "../components/PrescriptionHistory";
+import { InvestigationSelector } from "../components/InvestigationSelector";
 import type { SavedPrescription } from "../components/PrescriptionHistory";
 
 // Layout pagination imports
@@ -82,7 +83,6 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
   const [advice, setAdvice] = useState<string>("");
   const [followUp, setFollowUp] = useState<string>("");
   const [investigations, setInvestigations] = useState<string[]>([]);
-  const [customInvestigation, setCustomInvestigation] = useState<string>("");
   const [patientHistory, setPatientHistory] = useState<SavedPrescription[]>([]);
   const [patientGender, setPatientGender] = useState<string>("");
   const [patientPhone, setPatientPhone] = useState<string>("");
@@ -336,20 +336,38 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
   const handleSelectVisit = async (visit: WaitingVisitDetail) => {
     setSelectedVisit(visit);
     setRxNumber(generateRxNumber());
-    setPatientName(visit.patient.name);
-    setPatientGender(visit.patient.gender || "");
-    setPatientPhone(visit.patient.phone || "");
-    setPatientCode(visit.patient.patient_code || "");
+
+    // Fetch fresh patient and vitals data to prevent stale state / race conditions
+    let freshPatient = visit.patient;
+    let freshVitals = visit.vitals;
+    try {
+      const [patientData, vitalsData] = await Promise.all([
+        patientService.getPatientById(visit.patient_id),
+        vitalService.getVitalsForVisit(visit.id)
+      ]);
+      if (patientData) {
+        freshPatient = patientData;
+      }
+      if (vitalsData) {
+        freshVitals = [vitalsData];
+      }
+    } catch (err) {
+      console.error("Error fetching fresh patient/vitals details:", err);
+    }
+
+    setPatientName(freshPatient.name);
+    setPatientGender(freshPatient.gender || "");
+    setPatientPhone(freshPatient.phone || "");
+    setPatientCode(freshPatient.patient_code || "");
     setSelectedMedicines([]);
     setAdvice("");
     setFollowUp("");
     setInvestigations([]);
-    setCustomInvestigation("");
 
     // Calculate age string from patient DOB or fallback to age_years
     let ageStr = "";
-    if (visit.patient.date_of_birth) {
-      const dob = new Date(visit.patient.date_of_birth);
+    if (freshPatient.date_of_birth) {
+      const dob = new Date(freshPatient.date_of_birth);
       const today = new Date();
       let years = today.getFullYear() - dob.getFullYear();
       let months = today.getMonth() - dob.getMonth();
@@ -360,16 +378,46 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
       ageStr = years > 0
         ? `${years} year${years > 1 ? "s" : ""}${months > 0 ? ` ${months} month${months > 1 ? "s" : ""}` : ""}`
         : `${months} month${months > 1 ? "s" : ""}`;
-    } else if (visit.patient.age_years !== undefined && visit.patient.age_years !== null) {
-      ageStr = `${visit.patient.age_years} year${visit.patient.age_years > 1 ? "s" : ""}`;
+    } else if (freshPatient.age_years !== undefined && freshPatient.age_years !== null) {
+      ageStr = `${freshPatient.age_years} year${freshPatient.age_years > 1 ? "s" : ""}`;
     } else {
       ageStr = "N/A";
     }
     setPatientAge(ageStr);
 
     // Set weight
-    const vital = visit.vitals?.[0];
+    const vital = freshVitals?.[0];
     setPatientWeight(vital?.weight_kg || null);
+
+    // If the visit is completed, load its prescription
+    if (visit.status === "completed") {
+      try {
+        const rx = await prescriptionService.getPrescriptionByVisitId(visit.id);
+        if (rx) {
+          setRxNumber(rx.rx_number);
+          setSelectedMedicines(
+            (rx.items || []).map((item) => ({
+              id: item.id,
+              name: item.medicine_name,
+              form: item.medicine_form || "",
+              strength: item.medicine_strength || "",
+              dosePerKg: item.dose_per_kg || null,
+              unit: item.unit || "mg",
+              maxDose: null,
+              frequency: (item.frequency as any) || "BD",
+              duration: item.duration,
+              overrideDose: item.override_dose || null,
+              instructions: item.instructions
+            }))
+          );
+          setAdvice(rx.notes || "");
+          setFollowUp(rx.follow_up || "");
+          setInvestigations(rx.investigations || []);
+        }
+      } catch (err) {
+        console.error("Failed to load completed visit prescription:", err);
+      }
+    }
 
     // Fetch patient's previous prescriptions history
     try {
@@ -495,7 +543,6 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
       setAdvice("");
       setFollowUp("");
       setInvestigations([]);
-      setCustomInvestigation("");
       setRxNumber(generateRxNumber());
     }
   };
@@ -511,39 +558,7 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
     setErrorMsg("");
 
     try {
-      // 1. Prepare Prescription Payload
-      const rxPayload = {
-        visit_id: selectedVisit.id,
-        notes: advice,
-        doctor_name: doctorName,
-        follow_up: followUp,
-        rx_number: rxNumber
-      };
-
-      // 2. Prepare Items
-      const itemsPayload = selectedMedicines.map((med) => {
-        const calculated = calculateDose(med, patientWeight, med.overrideDose);
-        return {
-          medicine_name: med.name,
-          dosage: calculated.doseText,
-          duration: med.duration,
-          instructions: med.instructions,
-          frequency: med.frequency,
-          medicine_form: med.form,
-          medicine_strength: med.strength,
-          override_dose: med.overrideDose,
-          dose_per_kg: med.dosePerKg,
-          unit: med.unit
-        };
-      });
-
-      // 3. Save to Supabase
-      await prescriptionService.createPrescription(rxPayload, itemsPayload, investigations);
-
-      // 4. Update status to completed
-      await visitService.updateVisitStatus(selectedVisit.id, "completed");
-
-      // 5. Trigger print callback
+      // Trigger print callback only
       onPrintTrigger({
         rxNumber,
         currentDateStr,
@@ -559,6 +574,55 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
         patientPhone,
         patientCode
       });
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(`Failed to print prescription: ${err.message || err}`);
+    }
+  };
+
+  // Save & Complete (without printing)
+  const handleComplete = async () => {
+    if (!selectedVisit) return;
+    setErrorMsg("");
+
+    try {
+      const hasMedicines = selectedMedicines.length > 0;
+      const hasAdvice = advice.trim() !== "";
+      const hasInvestigations = investigations.length > 0;
+
+      if (hasMedicines || hasAdvice || hasInvestigations) {
+        // 1. Prepare Prescription Payload
+        const rxPayload = {
+          visit_id: selectedVisit.id,
+          notes: advice,
+          doctor_name: doctorName,
+          follow_up: followUp,
+          rx_number: rxNumber
+        };
+
+        // 2. Prepare Items
+        const itemsPayload = selectedMedicines.map((med) => {
+          const calculated = calculateDose(med, patientWeight, med.overrideDose);
+          return {
+            medicine_name: med.name,
+            dosage: calculated.doseText,
+            duration: med.duration,
+            instructions: med.instructions,
+            frequency: med.frequency,
+            medicine_form: med.form,
+            medicine_strength: med.strength,
+            override_dose: med.overrideDose,
+            dose_per_kg: med.dosePerKg,
+            unit: med.unit
+          };
+        });
+
+        // 3. Save to Supabase
+        await prescriptionService.createPrescription(rxPayload, itemsPayload, investigations);
+      }
+
+      // 4. Update status to completed
+      await visitService.updateVisitStatus(selectedVisit.id, "completed");
 
       // Clear consultation and deselect patient
       setSelectedVisit(null);
@@ -566,12 +630,11 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
       setAdvice("");
       setFollowUp("");
       setInvestigations([]);
-      setCustomInvestigation("");
       loadQueue();
       loadRecentCompleted();
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(`Failed to save prescription: ${err.message || err}`);
+      setErrorMsg(`Failed to complete consultation: ${err.message || err}`);
     }
   };
 
@@ -841,6 +904,20 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
                 </div>
                 <button 
                   type="button" 
+                  className="btn btn-success btn-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleComplete();
+                  }}
+                  style={{ marginRight: "10px" }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: "4px", display: "inline-block", verticalAlign: "middle" }}>
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  Complete Consultation
+                </button>
+                <button 
+                  type="button" 
                   style={{ background: "none", border: "none", cursor: "pointer", color: "var(--slate)" }}
                   aria-label={collapsedSections.patientDetails ? "Expand" : "Collapse"}
                 >
@@ -1025,189 +1102,19 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
             </div>
 
             {/* Investigations */}
-            <div className="medical-card" id="section-investigations">
-              <div 
-                className="card-header" 
-                style={{ cursor: "pointer" }}
-                onClick={() => toggleSection("investigations")}
-              >
-                <div className="card-header-icon bg-light-primary text-primary">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"></path>
-                  </svg>
-                </div>
-                <div className="card-header-titles">
-                  <h3 className="card-title">Investigations</h3>
-                  <p className="card-subtitle">Order lab tests & imaging for this visit</p>
-                </div>
-                {investigations.length > 0 && (
-                  <span
-                    style={{
-                      marginLeft: "auto",
-                      marginRight: "8px",
-                      backgroundColor: "var(--primary)",
-                      color: "var(--white)",
-                      borderRadius: "20px",
-                      padding: "2px 10px",
-                      fontSize: "12px",
-                      fontWeight: 700
-                    }}
-                  >
-                    {investigations.length} ordered
-                  </span>
-                )}
-                <button 
-                  type="button" 
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--slate)" }}
-                  aria-label={collapsedSections.investigations ? "Expand" : "Collapse"}
-                >
-                  <svg 
-                    width="20" 
-                    height="20" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2.5"
-                    style={{ transform: collapsedSections.investigations ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.2s" }}
-                  >
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                </button>
-              </div>
-              {!collapsedSections.investigations && (
-                <div className="card-body">
-                  {/* Preset quick-select pills */}
-                  <div style={{ marginBottom: "14px" }}>
-                    <div style={{ fontSize: "11px", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>Quick Select</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                      {[
-                        "CBC", "CRP", "ESR", "LFT", "KFT", "RBS", "HbA1c",
-                        "Blood Culture", "Urine R/E", "Urine C/S", "Stool R/E",
-                        "Chest X-Ray", "USG Abdomen", "Thyroid Profile",
-                        "Dengue NS1", "Widal Test", "Malaria Card"
-                      ].map((test) => {
-                        const isSelected = investigations.includes(test);
-                        return (
-                          <button
-                            key={test}
-                            type="button"
-                            onClick={() => {
-                              if (isSelected) {
-                                setInvestigations((prev) => prev.filter((t) => t !== test));
-                              } else {
-                                setInvestigations((prev) => [...prev, test]);
-                              }
-                            }}
-                            style={{
-                              padding: "4px 12px",
-                              borderRadius: "20px",
-                              fontSize: "12px",
-                              fontWeight: 600,
-                              cursor: "pointer",
-                              border: `1.5px solid ${isSelected ? "var(--primary)" : "var(--border)"}`,
-                              backgroundColor: isSelected ? "var(--primary)" : "var(--white)",
-                              color: isSelected ? "var(--white)" : "var(--navy)",
-                              transition: "var(--transition)"
-                            }}
-                          >
-                            {isSelected && <span style={{ marginRight: "4px" }}>✓</span>}
-                            {test}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Custom investigation input */}
-                  <div style={{ display: "flex", gap: "8px", marginBottom: "14px" }}>
-                    <input
-                      id="custom-investigation-input"
-                      type="text"
-                      className="form-control form-control-sm"
-                      placeholder="Add custom investigation (e.g. Serum Ferritin)..."
-                      value={customInvestigation}
-                      onChange={(e) => setCustomInvestigation(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          const val = customInvestigation.trim();
-                          if (val && !investigations.includes(val)) {
-                            setInvestigations((prev) => [...prev, val]);
-                          }
-                          setCustomInvestigation("");
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      style={{ whiteSpace: "nowrap", height: "36px", padding: "0 16px" }}
-                      onClick={() => {
-                        const val = customInvestigation.trim();
-                        if (val && !investigations.includes(val)) {
-                          setInvestigations((prev) => [...prev, val]);
-                        }
-                        setCustomInvestigation("");
-                      }}
-                      disabled={!customInvestigation.trim()}
-                    >
-                      + Add
-                    </button>
-                  </div>
-
-                  {/* Ordered investigations tag list */}
-                  {investigations.length > 0 ? (
-                    <div>
-                      <div style={{ fontSize: "11px", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>Ordered ({investigations.length})</div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                        {investigations.map((inv) => (
-                          <span
-                            key={inv}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "5px",
-                              padding: "4px 10px 4px 12px",
-                              borderRadius: "20px",
-                              backgroundColor: "rgba(10, 124, 107, 0.09)",
-                              border: "1px solid var(--primary-border)",
-                              color: "var(--primary-dark)",
-                              fontSize: "12.5px",
-                              fontWeight: 600
-                            }}
-                          >
-                            {inv}
-                            <button
-                              type="button"
-                              onClick={() => setInvestigations((prev) => prev.filter((t) => t !== inv))}
-                              style={{
-                                background: "none",
-                                border: "none",
-                                cursor: "pointer",
-                                color: "var(--primary-dark)",
-                                opacity: 0.6,
-                                padding: 0,
-                                lineHeight: 1,
-                                fontSize: "14px",
-                                display: "flex",
-                                alignItems: "center"
-                              }}
-                              title="Remove"
-                            >
-                              &times;
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="empty-state" style={{ padding: "12px 0" }}>
-                      <p className="empty-state-text" style={{ fontSize: "12.5px" }}>No investigations ordered yet</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <InvestigationSelector
+              selectedInvestigations={investigations}
+              onToggleInvestigation={(name) => {
+                setInvestigations((prev) =>
+                  prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name]
+                );
+              }}
+              onAddCustomInvestigation={(name) => {
+                setInvestigations((prev) => [...prev, name]);
+              }}
+              isCollapsed={collapsedSections.investigations}
+              onToggleCollapse={() => toggleSection("investigations")}
+            />
 
             {/* Advice & Follow-up */}
             <div className="medical-card" id="section-advice-followup">

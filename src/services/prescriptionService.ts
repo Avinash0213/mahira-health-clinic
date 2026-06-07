@@ -66,6 +66,28 @@ export const prescriptionService = {
     return rxData;
   },
 
+  async getPrescriptionByVisitId(visitId: string): Promise<(Prescription & { items: PrescriptionItem[]; investigations: string[] }) | null> {
+    if (!supabase) throw new Error("Supabase is not configured");
+
+    const { data, error } = await supabase
+      .from("prescriptions")
+      .select("*, items:prescription_items(*), investigation_items:prescription_investigations(*)")
+      .eq("visit_id", visitId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching prescription by visit ID:", error);
+      throw error;
+    }
+
+    if (!data) return null;
+
+    return {
+      ...data,
+      investigations: (data.investigation_items || []).map((inv: any) => inv.name)
+    };
+  },
+
   async getPrescriptionHistoryForPatient(patientId: string): Promise<(Prescription & { items: PrescriptionItem[]; investigations: string[] })[]> {
     if (!supabase) throw new Error("Supabase is not configured");
 
