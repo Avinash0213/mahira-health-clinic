@@ -80,6 +80,7 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
     return localStorage.getItem("mhc_default_doctor_name") || "Faisal";
   });
   const [selectedMedicines, setSelectedMedicines] = useState<SelectedMedicineInstance[]>([]);
+  const [commonDuration, setCommonDuration] = useState<string>("5 days");
   const [advice, setAdvice] = useState<string>("");
   const [followUp, setFollowUp] = useState<string>("");
   const [investigations, setInvestigations] = useState<string[]>([]);
@@ -360,6 +361,7 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
     setPatientPhone(freshPatient.phone || "");
     setPatientCode(freshPatient.patient_code || "");
     setSelectedMedicines([]);
+    setCommonDuration("5 days");
     setAdvice("");
     setFollowUp("");
     setInvestigations([]);
@@ -516,11 +518,19 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
       unit: med.unit,
       maxDose: med.maxDose,
       frequency: "BD",
-      duration: "5 days",
+      duration: commonDuration,
       overrideDose: null,
       instructions: "After meals"
     };
     setSelectedMedicines((prev) => [...prev, newInstance]);
+  };
+
+  // Update common duration for all current medicines
+  const handleCommonDurationChange = (val: string) => {
+    setCommonDuration(val);
+    setSelectedMedicines((prev) =>
+      prev.map((m) => ({ ...m, duration: val }))
+    );
   };
 
   // Remove medicine
@@ -540,6 +550,7 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
     const confirmClear = window.confirm("Are you sure you want to clear the current consultation?");
     if (confirmClear) {
       setSelectedMedicines([]);
+      setCommonDuration("5 days");
       setAdvice("");
       setFollowUp("");
       setInvestigations([]);
@@ -1000,6 +1011,16 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
               </div>
               {!collapsedSections.selectedMeds && (
                 <div className="card-body">
+                  <div className="form-group" style={{ marginBottom: "20px", maxWidth: "320px" }}>
+                    <label className="form-label font-medium" style={{ fontSize: "13px", color: "var(--navy)" }}>Default Duration for All Medications</label>
+                    <input
+                      type="text"
+                      className="form-control form-control-sm"
+                      placeholder="e.g., 5 days"
+                      value={commonDuration}
+                      onChange={(e) => handleCommonDurationChange(e.target.value)}
+                    />
+                  </div>
                   {selectedMedicines.length > 0 ? (
                     <div className="selected-meds-list">
                       {selectedMedicines.map((med, index) => {
