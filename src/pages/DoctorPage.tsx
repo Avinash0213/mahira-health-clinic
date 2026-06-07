@@ -82,7 +82,7 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
   const [selectedMedicines, setSelectedMedicines] = useState<SelectedMedicineInstance[]>([]);
   const [commonDuration, setCommonDuration] = useState<number | "">(5);
   const [advice, setAdvice] = useState<string>("");
-  const [followUp, setFollowUp] = useState<string>("");
+  const [followUpDays, setFollowUpDays] = useState<number | "">("");
   const [investigations, setInvestigations] = useState<string[]>([]);
   const [patientHistory, setPatientHistory] = useState<SavedPrescription[]>([]);
   const [patientGender, setPatientGender] = useState<string>("");
@@ -363,7 +363,7 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
     setSelectedMedicines([]);
     setCommonDuration(5);
     setAdvice("");
-    setFollowUp("");
+    setFollowUpDays("");
     setInvestigations([]);
 
     // Calculate age string from patient DOB or fallback to age_years
@@ -413,7 +413,8 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
             }))
           );
           setAdvice(rx.notes || "");
-          setFollowUp(rx.follow_up || "");
+          const match = rx.follow_up ? rx.follow_up.match(/^(\d+)/) : null;
+          setFollowUpDays(match ? parseInt(match[1], 10) : "");
           setInvestigations(rx.investigations || []);
         }
       } catch (err) {
@@ -465,7 +466,7 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
   const { medicineHeights, adviceHeight, followUpHeight, investigationsHeight, isMeasuring } = useMeasuredHeights(
     selectedMedicines,
     advice,
-    followUp,
+    followUpDays !== "" ? `${followUpDays} days` : "",
     investigations,
     A4_WIDTH_PX - PAGE_PADDING_PX * 2,
     patientWeight
@@ -552,7 +553,7 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
       setSelectedMedicines([]);
       setCommonDuration(5);
       setAdvice("");
-      setFollowUp("");
+      setFollowUpDays("");
       setInvestigations([]);
       setRxNumber(generateRxNumber());
     }
@@ -579,7 +580,7 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
         doctorName,
         prescriptionPages,
         advice,
-        followUp,
+        followUp: followUpDays !== "" ? `${followUpDays} days` : "",
         investigations,
         patientGender,
         patientPhone,
@@ -607,7 +608,7 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
           visit_id: selectedVisit.id,
           notes: advice,
           doctor_name: doctorName,
-          follow_up: followUp,
+          follow_up: followUpDays !== "" ? `${followUpDays} days` : "",
           rx_number: rxNumber
         };
 
@@ -639,7 +640,7 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
       setSelectedVisit(null);
       setSelectedMedicines([]);
       setAdvice("");
-      setFollowUp("");
+      setFollowUpDays("");
       setInvestigations([]);
       loadQueue();
       loadRecentCompleted();
@@ -658,7 +659,8 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
       }))
     );
     setAdvice(rx.advice);
-    setFollowUp(rx.followUp);
+    const match = rx.followUp ? rx.followUp.match(/^(\d+)/) : null;
+    setFollowUpDays(match ? parseInt(match[1], 10) : "");
     setInvestigations(rx.investigations || []);
     setPatientGender((rx as any).patientGender || "");
     setPatientPhone((rx as any).patientPhone || "");
@@ -1188,13 +1190,18 @@ export const DoctorPage: React.FC<DoctorPageProps> = ({
                       ></textarea>
                     </div>
                     <div className="form-group col-span-12">
-                      <label htmlFor="followup" className="form-label">Follow-up Timing</label>
+                      <label htmlFor="followup" className="form-label">Follow-up (Days)</label>
                       <input
                         id="followup"
-                        type="text"
+                        type="number"
+                        min="1"
                         className="form-control"
-                        value={followUp}
-                        onChange={(e) => setFollowUp(e.target.value)}
+                        placeholder="e.g., 7"
+                        value={followUpDays}
+                        onChange={(e) => {
+                          const val = e.target.value === "" ? "" : parseInt(e.target.value, 10);
+                          setFollowUpDays(val);
+                        }}
                       />
                     </div>
                   </div>
